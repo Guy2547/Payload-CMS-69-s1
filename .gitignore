@@ -1,6 +1,7 @@
 data/
 .env
 data-postgres/
+data-postgres-strapi-backup/
 data-pgadmin/
 node_modules/
 AGENTS.md
