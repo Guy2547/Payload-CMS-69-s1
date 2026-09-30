@@ -41,6 +41,7 @@ services:
     environment:
       - DATABASE_URL=postgres://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}
       - PAYLOAD_SECRET=${PAYLOAD_SECRET}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - REDIS_URL=redis://redis:6379
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:9092,http://127.0.0.1:9092}
       - EMAIL_SMTP_HOST=${EMAIL_SMTP_HOST:-smtp.gmail.com}
