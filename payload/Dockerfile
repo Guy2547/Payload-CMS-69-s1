@@ -6,11 +6,13 @@ RUN apk add --no-cache libc6-compat
 
 FROM base AS deps
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 # NOTE: `npm ci` is intentionally NOT used. The lock file is authored on
 # Windows and npm resolves a few transitive deps (yjs, monaco-editor, ...)
 # differently on Linux, so strict `npm ci` fails in-container while the
 # host install is healthy. Plain `npm install` tolerates that skew.
+# `.npmrc` (legacy-peer-deps=true, same as host) must be copied too,
+# otherwise peer resolution (e.g. graphql 17 vs payload's ^16.8.1) fails.
 RUN npm install --no-audit --no-fund
 
 FROM base AS builder

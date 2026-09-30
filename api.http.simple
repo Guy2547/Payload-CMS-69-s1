@@ -98,119 +98,126 @@ Authorization: Bearer {{userLogin.response.body.$.token}}
 ###
 
 #3. Content (NOTE: Payload body is flat, NO {"data":...} wrapper; update = PATCH)
+# Strict: ADMIN token required for create/update/delete.
 
-##3.1 Student
+##3.1 Department
 
-###3.1.1 Create Student
-# @name createStudent
-POST http://localhost:9092/api/students
+###3.1.1 Create Department
+# @name createDepartment
+POST http://localhost:9092/api/departments
 content-type: application/json
-Authorization: Bearer {{userLogin.response.body.$.token}}
+Authorization: Bearer {{login.response.body.$.token}}
+
+{
+  "name": "",
+  "description": ""
+}
+###
+
+###3.1.2 List All Departments
+GET http://localhost:9092/api/departments
+Authorization: Bearer {{login.response.body.$.token}}
+###
+
+###3.1.3 Get Department by ID
+GET http://localhost:9092/api/departments/{{createDepartment.response.body.$.doc.id}}
+Authorization: Bearer {{login.response.body.$.token}}
+###
+
+###3.1.4 Update Department
+PATCH http://localhost:9092/api/departments/{{createDepartment.response.body.$.doc.id}}
+content-type: application/json
+Authorization: Bearer {{login.response.body.$.token}}
+
+{
+  "description": ""
+}
+###
+
+###3.1.5 Delete Department
+DELETE http://localhost:9092/api/departments/{{createDepartment.response.body.$.doc.id}}
+Authorization: Bearer {{login.response.body.$.token}}
+###
+
+##3.2 Position
+
+###3.2.1 Create Position
+# @name createPosition
+POST http://localhost:9092/api/positions
+content-type: application/json
+Authorization: Bearer {{login.response.body.$.token}}
+
+{
+  "name": "",
+  "level": "junior",
+  "description": ""
+}
+###
+
+###3.2.2 List All Positions
+GET http://localhost:9092/api/positions
+Authorization: Bearer {{login.response.body.$.token}}
+###
+
+###3.2.3 Get Position by ID
+GET http://localhost:9092/api/positions/{{createPosition.response.body.$.doc.id}}
+Authorization: Bearer {{login.response.body.$.token}}
+###
+
+###3.2.4 Update Position
+PATCH http://localhost:9092/api/positions/{{createPosition.response.body.$.doc.id}}
+content-type: application/json
+Authorization: Bearer {{login.response.body.$.token}}
+
+{
+  "description": ""
+}
+###
+
+###3.2.5 Delete Position
+DELETE http://localhost:9092/api/positions/{{createPosition.response.body.$.doc.id}}
+Authorization: Bearer {{login.response.body.$.token}}
+###
+
+##3.3 Employee
+
+###3.3.1 Create Employee
+# @name createEmployee
+POST http://localhost:9092/api/employees
+content-type: application/json
+Authorization: Bearer {{login.response.body.$.token}}
 
 {
   "name": "",
   "mobile": "",
-  "cardId": ""
+  "cardId": "",
+  "department": "{{createDepartment.response.body.$.doc.id}}",
+  "position": "{{createPosition.response.body.$.doc.id}}",
+  "salary": 0
 }
 ###
 
-###3.1.2 List All Students
-GET http://localhost:9092/api/students
-Authorization: Bearer {{userLogin.response.body.$.token}}
+###3.3.2 List All Employees
+GET http://localhost:9092/api/employees
+Authorization: Bearer {{login.response.body.$.token}}
 ###
 
-###3.1.3 Get Student by ID
-GET http://localhost:9092/api/students/{{createStudent.response.body.$.doc.id}}
-Authorization: Bearer {{userLogin.response.body.$.token}}
+###3.3.3 Get Employee by ID
+GET http://localhost:9092/api/employees/{{createEmployee.response.body.$.doc.id}}
+Authorization: Bearer {{login.response.body.$.token}}
 ###
 
-###3.1.4 Update Student
-PATCH http://localhost:9092/api/students/{{createStudent.response.body.$.doc.id}}
+###3.3.4 Update Employee
+PATCH http://localhost:9092/api/employees/{{createEmployee.response.body.$.doc.id}}
 content-type: application/json
-Authorization: Bearer {{userLogin.response.body.$.token}}
+Authorization: Bearer {{login.response.body.$.token}}
 
 {
   "name": ""
 }
 ###
 
-###3.1.5 Delete Student
-DELETE http://localhost:9092/api/students/{{createStudent.response.body.$.doc.id}}
-Authorization: Bearer {{userLogin.response.body.$.token}}
-###
-
-##3.2 Subject
-
-###3.2.1 Create Subject
-# @name createSubject
-POST http://localhost:9092/api/subjects
-content-type: application/json
-Authorization: Bearer {{userLogin.response.body.$.token}}
-
-{
-  "name": ""
-}
-###
-
-###3.2.2 List All Subjects
-GET http://localhost:9092/api/subjects
-Authorization: Bearer {{userLogin.response.body.$.token}}
-###
-
-###3.2.3 Get Subject by ID
-GET http://localhost:9092/api/subjects/{{createSubject.response.body.$.doc.id}}
-Authorization: Bearer {{userLogin.response.body.$.token}}
-###
-
-###3.2.4 Update Subject
-PATCH http://localhost:9092/api/subjects/{{createSubject.response.body.$.doc.id}}
-content-type: application/json
-Authorization: Bearer {{userLogin.response.body.$.token}}
-
-{
-  "name": ""
-}
-###
-
-###3.2.5 Delete Subject
-DELETE http://localhost:9092/api/subjects/{{createSubject.response.body.$.doc.id}}
-Authorization: Bearer {{userLogin.response.body.$.token}}
-###
-
-##3.3 Teacher
-
-###3.3.1 Create Teacher
-# @name createTeacher
-POST http://localhost:9092/api/teachers
-content-type: application/json
-Authorization: Bearer {{userLogin.response.body.$.token}}
-
-{
-  "name": ""
-}
-###
-
-###3.3.2 List All Teachers
-GET http://localhost:9092/api/teachers
-Authorization: Bearer {{userLogin.response.body.$.token}}
-###
-
-###3.3.3 Get Teacher by ID
-GET http://localhost:9092/api/teachers/{{createTeacher.response.body.$.doc.id}}
-Authorization: Bearer {{userLogin.response.body.$.token}}
-###
-
-###3.3.4 Update Teacher
-PATCH http://localhost:9092/api/teachers/{{createTeacher.response.body.$.doc.id}}
-content-type: application/json
-Authorization: Bearer {{userLogin.response.body.$.token}}
-
-{
-  "name": ""
-}
-###
-
-###3.3.5 Delete Teacher
-DELETE http://localhost:9092/api/teachers/{{createTeacher.response.body.$.doc.id}}
-Authorization: Bearer {{userLogin.response.body.$.token}}
+###3.3.5 Delete Employee
+DELETE http://localhost:9092/api/employees/{{createEmployee.response.body.$.doc.id}}
+Authorization: Bearer {{login.response.body.$.token}}
 ###

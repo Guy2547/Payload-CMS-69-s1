@@ -8,9 +8,9 @@ import sharp from 'sharp'
 
 import { Admins } from './collections/Admins'
 import { Users } from './collections/Users'
-import { Students } from './collections/Students'
-import { Subjects } from './collections/Subjects'
-import { Teachers } from './collections/Teachers'
+import { Departments } from './collections/Departments'
+import { Positions } from './collections/Positions'
+import { Employees } from './collections/Employees'
 import { Media } from './collections/Media'
 
 const filename = fileURLToPath(import.meta.url)
@@ -50,7 +50,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Admins, Users, Students, Subjects, Teachers, Media],
+  collections: [Admins, Users, Departments, Positions, Employees, Media],
   editor: lexicalEditor(),
   secret: PAYLOAD_SECRET,
   // A05: bound query cost (deep populate / huge pages = DoS vector).

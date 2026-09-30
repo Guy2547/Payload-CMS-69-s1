@@ -384,18 +384,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "_verified": {
-          "name": "_verified",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "_verificationtoken": {
-          "name": "_verificationtoken",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
         "login_attempts": {
           "name": "login_attempts",
           "type": "numeric",
@@ -464,8 +452,198 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.students": {
-      "name": "students",
+    "public.departments": {
+      "name": "departments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "departments_name_idx": {
+          "name": "departments_name_idx",
+          "columns": [
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "departments_updated_at_idx": {
+          "name": "departments_updated_at_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "departments_created_at_idx": {
+          "name": "departments_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.positions": {
+      "name": "positions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "level": {
+          "name": "level",
+          "type": "enum_positions_level",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'junior'"
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "positions_name_idx": {
+          "name": "positions_name_idx",
+          "columns": [
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "positions_updated_at_idx": {
+          "name": "positions_updated_at_idx",
+          "columns": [
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "positions_created_at_idx": {
+          "name": "positions_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.employees": {
+      "name": "employees",
       "schema": "",
       "columns": {
         "id": {
@@ -492,75 +670,29 @@
           "primaryKey": false,
           "notNull": false
         },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "students_updated_at_idx": {
-          "name": "students_updated_at_idx",
-          "columns": [
-            {
-              "expression": "updated_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "students_created_at_idx": {
-          "name": "students_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.subjects": {
-      "name": "subjects",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar",
+        "department_id": {
+          "name": "department_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "position_id": {
+          "name": "position_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hire_date": {
+          "name": "hire_date",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "salary": {
+          "name": "salary",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
         },
         "updated_at": {
           "name": "updated_at",
@@ -578,8 +710,38 @@
         }
       },
       "indexes": {
-        "subjects_updated_at_idx": {
-          "name": "subjects_updated_at_idx",
+        "employees_department_idx": {
+          "name": "employees_department_idx",
+          "columns": [
+            {
+              "expression": "department_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "employees_position_idx": {
+          "name": "employees_position_idx",
+          "columns": [
+            {
+              "expression": "position_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "employees_updated_at_idx": {
+          "name": "employees_updated_at_idx",
           "columns": [
             {
               "expression": "updated_at",
@@ -593,8 +755,8 @@
           "method": "btree",
           "with": {}
         },
-        "subjects_created_at_idx": {
-          "name": "subjects_created_at_idx",
+        "employees_created_at_idx": {
+          "name": "employees_created_at_idx",
           "columns": [
             {
               "expression": "created_at",
@@ -609,77 +771,34 @@
           "with": {}
         }
       },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.teachers": {
-      "name": "teachers",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
+      "foreignKeys": {
+        "employees_department_id_departments_id_fk": {
+          "name": "employees_department_id_departments_id_fk",
+          "tableFrom": "employees",
+          "tableTo": "departments",
+          "columnsFrom": [
+            "department_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
         },
-        "name": {
-          "name": "name",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
+        "employees_position_id_positions_id_fk": {
+          "name": "employees_position_id_positions_id_fk",
+          "tableFrom": "employees",
+          "tableTo": "positions",
+          "columnsFrom": [
+            "position_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
-      "indexes": {
-        "teachers_updated_at_idx": {
-          "name": "teachers_updated_at_idx",
-          "columns": [
-            {
-              "expression": "updated_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "teachers_created_at_idx": {
-          "name": "teachers_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -1048,20 +1167,20 @@
           "primaryKey": false,
           "notNull": false
         },
-        "students_id": {
-          "name": "students_id",
+        "departments_id": {
+          "name": "departments_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "subjects_id": {
-          "name": "subjects_id",
+        "positions_id": {
+          "name": "positions_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "teachers_id": {
-          "name": "teachers_id",
+        "employees_id": {
+          "name": "employees_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -1149,11 +1268,11 @@
           "method": "btree",
           "with": {}
         },
-        "payload_locked_documents_rels_students_id_idx": {
-          "name": "payload_locked_documents_rels_students_id_idx",
+        "payload_locked_documents_rels_departments_id_idx": {
+          "name": "payload_locked_documents_rels_departments_id_idx",
           "columns": [
             {
-              "expression": "students_id",
+              "expression": "departments_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1164,11 +1283,11 @@
           "method": "btree",
           "with": {}
         },
-        "payload_locked_documents_rels_subjects_id_idx": {
-          "name": "payload_locked_documents_rels_subjects_id_idx",
+        "payload_locked_documents_rels_positions_id_idx": {
+          "name": "payload_locked_documents_rels_positions_id_idx",
           "columns": [
             {
-              "expression": "subjects_id",
+              "expression": "positions_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1179,11 +1298,11 @@
           "method": "btree",
           "with": {}
         },
-        "payload_locked_documents_rels_teachers_id_idx": {
-          "name": "payload_locked_documents_rels_teachers_id_idx",
+        "payload_locked_documents_rels_employees_id_idx": {
+          "name": "payload_locked_documents_rels_employees_id_idx",
           "columns": [
             {
-              "expression": "teachers_id",
+              "expression": "employees_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1250,12 +1369,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "payload_locked_documents_rels_students_fk": {
-          "name": "payload_locked_documents_rels_students_fk",
+        "payload_locked_documents_rels_departments_fk": {
+          "name": "payload_locked_documents_rels_departments_fk",
           "tableFrom": "payload_locked_documents_rels",
-          "tableTo": "students",
+          "tableTo": "departments",
           "columnsFrom": [
-            "students_id"
+            "departments_id"
           ],
           "columnsTo": [
             "id"
@@ -1263,12 +1382,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "payload_locked_documents_rels_subjects_fk": {
-          "name": "payload_locked_documents_rels_subjects_fk",
+        "payload_locked_documents_rels_positions_fk": {
+          "name": "payload_locked_documents_rels_positions_fk",
           "tableFrom": "payload_locked_documents_rels",
-          "tableTo": "subjects",
+          "tableTo": "positions",
           "columnsFrom": [
-            "subjects_id"
+            "positions_id"
           ],
           "columnsTo": [
             "id"
@@ -1276,12 +1395,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "payload_locked_documents_rels_teachers_fk": {
-          "name": "payload_locked_documents_rels_teachers_fk",
+        "payload_locked_documents_rels_employees_fk": {
+          "name": "payload_locked_documents_rels_employees_fk",
           "tableFrom": "payload_locked_documents_rels",
-          "tableTo": "teachers",
+          "tableTo": "employees",
           "columnsFrom": [
-            "teachers_id"
+            "employees_id"
           ],
           "columnsTo": [
             "id"
@@ -1642,7 +1761,18 @@
       "isRLSEnabled": false
     }
   },
-  "enums": {},
+  "enums": {
+    "public.enum_positions_level": {
+      "name": "enum_positions_level",
+      "schema": "public",
+      "values": [
+        "junior",
+        "senior",
+        "lead",
+        "manager"
+      ]
+    }
+  },
   "schemas": {},
   "sequences": {},
   "roles": {},
@@ -1653,6 +1783,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "a2c380c7-a743-4d14-a23a-f0075078e742",
+  "id": "b9892c3b-37e7-49a0-8e21-cc8dc0c68ef8",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

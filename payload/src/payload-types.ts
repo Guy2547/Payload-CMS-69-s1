@@ -70,9 +70,9 @@ export interface Config {
   collections: {
     admins: Admin;
     users: User;
-    students: Student;
-    subjects: Subject;
-    teachers: Teacher;
+    departments: Department;
+    positions: Position;
+    employees: Employee;
     media: Media;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -83,9 +83,9 @@ export interface Config {
   collectionsSelect: {
     admins: AdminsSelect<false> | AdminsSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
-    students: StudentsSelect<false> | StudentsSelect<true>;
-    subjects: SubjectsSelect<false> | SubjectsSelect<true>;
-    teachers: TeachersSelect<false> | TeachersSelect<true>;
+    departments: DepartmentsSelect<false> | DepartmentsSelect<true>;
+    positions: PositionsSelect<false> | PositionsSelect<true>;
+    employees: EmployeesSelect<false> | EmployeesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -178,7 +178,7 @@ export interface Admin {
  */
 export interface User {
   id: number;
-  username?: string | null;
+  username: string;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -201,33 +201,40 @@ export interface User {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "students".
+ * via the `definition` "departments".
  */
-export interface Student {
+export interface Department {
+  id: number;
+  name: string;
+  description?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "positions".
+ */
+export interface Position {
+  id: number;
+  name: string;
+  level: 'junior' | 'senior' | 'lead' | 'manager';
+  description?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "employees".
+ */
+export interface Employee {
   id: number;
   name: string;
   mobile?: string | null;
   cardId?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "subjects".
- */
-export interface Subject {
-  id: number;
-  name: string;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "teachers".
- */
-export interface Teacher {
-  id: number;
-  name: string;
+  department: number | Department;
+  position: number | Position;
+  hireDate?: string | null;
+  salary?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -249,6 +256,16 @@ export interface Media {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
+  sizes?: {
+    thumbnail?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+  };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -283,16 +300,16 @@ export interface PayloadLockedDocument {
         value: number | User;
       } | null)
     | ({
-        relationTo: 'students';
-        value: number | Student;
+        relationTo: 'departments';
+        value: number | Department;
       } | null)
     | ({
-        relationTo: 'subjects';
-        value: number | Subject;
+        relationTo: 'positions';
+        value: number | Position;
       } | null)
     | ({
-        relationTo: 'teachers';
-        value: number | Teacher;
+        relationTo: 'employees';
+        value: number | Employee;
       } | null)
     | ({
         relationTo: 'media';
@@ -401,30 +418,37 @@ export interface UsersSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "students_select".
+ * via the `definition` "departments_select".
  */
-export interface StudentsSelect<T extends boolean = true> {
+export interface DepartmentsSelect<T extends boolean = true> {
+  name?: T;
+  description?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "positions_select".
+ */
+export interface PositionsSelect<T extends boolean = true> {
+  name?: T;
+  level?: T;
+  description?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "employees_select".
+ */
+export interface EmployeesSelect<T extends boolean = true> {
   name?: T;
   mobile?: T;
   cardId?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "subjects_select".
- */
-export interface SubjectsSelect<T extends boolean = true> {
-  name?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "teachers_select".
- */
-export interface TeachersSelect<T extends boolean = true> {
-  name?: T;
+  department?: T;
+  position?: T;
+  hireDate?: T;
+  salary?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -445,6 +469,20 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+  sizes?:
+    | T
+    | {
+        thumbnail?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+      };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
