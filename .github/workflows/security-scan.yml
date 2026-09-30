@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: aquasecurity/trivy-action@0.28.0
+      - uses: aquasecurity/trivy-action@v0.36.0 # post-Mar-2026-attack tag (v-prefix); 0.28.0 does not exist
         with:
           scan-type: fs
           scan-ref: .
