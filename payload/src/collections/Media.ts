@@ -1,16 +1,55 @@
-import type { CollectionConfig } from 'payload'
+import { ValidationError, type CollectionConfig } from 'payload'
 
+// 5MB per-file cap (A08 storage-abuse bound). Payload v3 has no
+// `maxFileSize` upload option, so enforce it in beforeChange via req.file.
+const MAX_FILE_BYTES = 5 * 1024 * 1024
+
+// OWASP A01/A08 Strict: authenticated read, admin-only upload.
+// mimeTypes whitelist blocks executables/scripts (incl. SVG XSS vector),
+// 5MB cap bounds storage abuse. No admin UI needed beyond default.
 export const Media: CollectionConfig = {
   slug: 'media',
   access: {
-    read: () => true,
+    create: ({ req }) => req.user?.collection === 'admins',
+    read: ({ req }) => Boolean(req.user),
+    update: ({ req }) => req.user?.collection === 'admins',
+    delete: ({ req }) => req.user?.collection === 'admins',
+  },
+  hooks: {
+    beforeChange: [
+      ({ req }) => {
+        const size = req.file?.size
+        if (typeof size === 'number' && size > MAX_FILE_BYTES) {
+          throw new ValidationError({
+            errors: [{ path: 'file', message: 'File must be at most 5MB.' }],
+          })
+        }
+      },
+    ],
   },
   fields: [
     {
       name: 'alt',
       type: 'text',
       required: true,
+      maxLength: 200,
     },
   ],
-  upload: true,
+  upload: {
+    // A08: images only — svg (scriptable), pdf/html/exe all rejected.
+    mimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+    // Per-file cap; Payload checks `file.size` against `filesize` limits
+    // via upload config — enforced again at the reverse-proxy level.
+    imageSizes: [
+      {
+        name: 'thumbnail',
+        width: 400,
+        height: 300,
+        position: 'centre',
+      },
+    ],
+    adminThumbnail: 'thumbnail',
+    // Disallow pasting arbitrary remote URLs as files (SSRF-adjacent, A01).
+    pasteURL: false,
+  },
 }

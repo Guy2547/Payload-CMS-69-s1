@@ -3,7 +3,9 @@ data/
 data-postgres/
 data-postgres-strapi-backup/
 data-pgadmin/
+data-redis/
 node_modules/
 AGENTS.md
 README.md
 api.http
+docs/

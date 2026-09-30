@@ -3,27 +3,46 @@ services:
     image: postgres:16-alpine
     container_name: 69-s1-db
     ports:
-      - 54327:5432
+      # A02: bind to loopback only — DB admin goes through pgAdmin, not the LAN.
+      - 127.0.0.1:54327:5432
     environment:
       - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
       - POSTGRES_USER=${DATABASE_USERNAME}
       - POSTGRES_DB=${DATABASE_NAME}
     volumes:
       - ./data-postgres:/var/lib/postgresql/data
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME} -d ${DATABASE_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 10
 
+  # A06/A07: shared store for auth rate limiting (Upstash-compatible —
+  # point REDIS_URL at an Upstash TLS endpoint to use managed Redis).
+  redis:
+    image: redis:7-alpine
+    container_name: 69-s1-redis
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - ./data-redis:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   app:
     build: ./payload
     container_name: 69-s1-app
     ports:
-      - 9092:3000
+      - 127.0.0.1:9092:3000
     environment:
       - DATABASE_URL=postgres://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}
       - PAYLOAD_SECRET=${PAYLOAD_SECRET}
+      - REDIS_URL=redis://redis:6379
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:9092,http://127.0.0.1:9092}
       - EMAIL_SMTP_HOST=${EMAIL_SMTP_HOST:-smtp.gmail.com}
       - EMAIL_SMTP_PORT=${EMAIL_SMTP_PORT:-587}
       - EMAIL_SMTP_USER=${EMAIL_SMTP_USER:-}
@@ -33,15 +52,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
 
   admin:
     image: dpage/pgadmin4
     container_name: 69-s1-admin
     ports:
-      - 8081:80
+      - 127.0.0.1:8081:80
     environment:
       - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
       - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
     depends_on:
       - db
       - app
+    restart: unless-stopped
