@@ -1,0 +1,77 @@
+# CI: typecheck + production build + integration tests (Payload CMS v3).
+# No secrets needed — every job uses dummy env values.
+# NOTE: `npm install` (not `npm ci`) is intentional: the lockfile is authored
+# on Windows/npm12 and resolves some transitive deps differently on Linux.
+name: ci
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 3 * * 1' # weekly Monday 03:00 UTC (catch regressions + fresh advisories)
+
+defaults:
+  run:
+    working-directory: ./payload
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: payload/package-lock.json
+      - run: npm install --no-audit --no-fund
+      - run: npx tsc --noEmit -p tsconfig.json
+
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+      # Dummy build-time values (same pattern as payload/Dockerfile ARG).
+      # Real values are injected at runtime; fail-closed validation needs ≥32 chars.
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/payload
+      PAYLOAD_SECRET: ci-dummy-secret-override-at-runtime-1234567890
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: payload/package-lock.json
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+
+  test-int:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: payload
+          POSTGRES_PASSWORD: payload
+          POSTGRES_DB: payload_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U payload -d payload_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+      DATABASE_URL: postgres://payload:payload@localhost:5432/payload_test
+      PAYLOAD_SECRET: ci-dummy-secret-override-at-runtime-1234567890
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: payload/package-lock.json
+      - run: npm install --no-audit --no-fund
+      - run: npm run payload -- migrate
+      - run: npm run test:int

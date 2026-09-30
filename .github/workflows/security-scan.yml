@@ -1,0 +1,56 @@
+# Security scans: deps audit + filesystem/IaC scan + secret scan.
+# No secrets needed. npm-audit is report-only: the repo has known
+# upstream-transitive findings (nodemailer/undici/vitest via Payload)
+# that cannot be fixed locally — fail would stay red on every PR.
+# (See docs/SECURITY-OWASP-2025.md §5.)
+name: security-scan
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 4 * * 1' # weekly Monday 04:00 UTC (fresh CVE feed)
+
+permissions:
+  contents: read
+  security-events: write # Trivy SARIF upload to Code Scanning
+
+jobs:
+  npm-audit:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: ./payload
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: payload/package-lock.json
+      - run: npm install --no-audit --no-fund
+      - run: npm audit --audit-level=high
+
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+          severity: HIGH,CRITICAL
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so leaked secrets in past commits are caught
+      - uses: gitleaks/gitleaks-action@v2
