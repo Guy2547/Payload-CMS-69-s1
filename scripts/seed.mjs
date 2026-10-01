@@ -14,13 +14,7 @@ async function request(endpoint, options = {}) {
       ...options.headers,
     },
   })
-  const text = await res.text()
-  let data
-  try {
-    data = JSON.parse(text)
-  } catch {
-    data = text
-  }
+  const data = await res.json().catch(() => res.text())
   return { status: res.status, ok: res.ok, data }
 }
 

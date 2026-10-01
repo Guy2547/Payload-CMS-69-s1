@@ -43,9 +43,7 @@ export function isEncrypted(value: unknown): boolean {
 export function encryptField(
   plaintext: string | number | null | undefined,
 ): string | null | undefined {
-  if (plaintext === null || plaintext === undefined || plaintext === '') {
-    return plaintext
-  }
+  if (!plaintext && plaintext !== 0) return plaintext
 
   const text = String(plaintext).trim()
   if (isEncrypted(text)) {
@@ -71,9 +69,7 @@ export function encryptField(
 export function decryptField(
   ciphertext: string | number | null | undefined,
 ): string | null | undefined {
-  if (ciphertext === null || ciphertext === undefined || ciphertext === '') {
-    return ciphertext
-  }
+  if (!ciphertext && ciphertext !== 0) return ciphertext
 
   const text = String(ciphertext).trim()
   if (!isEncrypted(text)) {

@@ -73,12 +73,10 @@ console.log(' PASS: Unencrypted legacy data gracefully returned as-is')
 
 // Test 7: Null, undefined, empty handling
 console.log('\nTest 7: Edge cases (null, undefined, empty)')
-assert.strictEqual(encryptField(null), null)
-assert.strictEqual(encryptField(undefined), undefined)
-assert.strictEqual(encryptField(''), '')
-assert.strictEqual(decryptField(null), null)
-assert.strictEqual(decryptField(undefined), undefined)
-assert.strictEqual(decryptField(''), '')
+for (const v of [null, undefined, '']) {
+  assert.strictEqual(encryptField(v), v)
+  assert.strictEqual(decryptField(v), v)
+}
 console.log(' PASS: Edge cases handled safely')
 
 console.log('\n=================================================')
