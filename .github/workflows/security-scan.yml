@@ -14,6 +14,7 @@ on:
 permissions:
   contents: read
   security-events: write # Trivy SARIF upload to Code Scanning
+  pull-requests: write
 
 jobs:
   npm-audit:

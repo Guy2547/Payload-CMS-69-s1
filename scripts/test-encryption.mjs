@@ -2,6 +2,7 @@
 // Unit tests for AES-256-GCM Field-Level Encryption
 
 import assert from 'node:assert'
+import crypto from 'node:crypto'
 import {
   encryptField,
   decryptField,
@@ -9,8 +10,8 @@ import {
   getEncryptionKey,
 } from '../payload/src/lib/encryption.ts'
 
-// Setup test key
-const TEST_KEY = 'ad517c08c2dbf25f24d18d27a1257b0dfc54e44ca11c2736491e3cb837521a27'
+// Setup dynamic random test key
+const TEST_KEY = crypto.randomBytes(32).toString('hex')
 process.env.ENCRYPTION_KEY = TEST_KEY
 
 console.log('--- Running Field-Level Encryption Unit Tests ---')
