@@ -8,11 +8,7 @@ import type { PayloadRequest } from 'payload'
 /** Extract best-effort client IP for rate-limit keys (works behind compose). */
 export function getClientIp(req: PayloadRequest): string {
   const headers = req.headers as unknown as Headers
-  const xff = headers?.get?.('x-forwarded-for')
-  if (xff) return xff.split(',')[0].trim()
-  const realIp = headers?.get?.('x-real-ip')
-  if (realIp) return realIp.trim()
-  return 'unknown'
+  return headers?.get?.('x-forwarded-for')?.split(',')[0]?.trim() || headers?.get?.('x-real-ip')?.trim() || 'unknown'
 }
 
 // --- Minimal sliding-window rate limiter ------------------------------------

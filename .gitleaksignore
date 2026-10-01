@@ -1,0 +1,3 @@
+# Gitleaks ignore list
+# Test mock key in historical test script commit
+477350b9e44693b7a92a05691930c2687e33e2b2:scripts/test-encryption.mjs:generic-api-key:14
