@@ -1,7 +1,8 @@
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
-import path from 'path'
+import { fileURLToPath } from 'url'
+import path, { dirname as getDirname } from 'path'
 import { buildConfig } from 'payload'
 import sharp from 'sharp'
 
@@ -12,7 +13,8 @@ import { Positions } from './collections/Positions'
 import { Employees } from './collections/Employees'
 import { Media } from './collections/Media'
 
-const dirname = import.meta.dirname
+const __filename = fileURLToPath(import.meta.url)
+const dirname = getDirname(__filename)
 
 // --- A02/A10 fail-closed env validation -------------------------------------
 // Never boot with an empty/weak secret or missing DB URL: fail-closed beats
