@@ -1,8 +1,8 @@
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
-import { fileURLToPath } from 'url'
-import path, { dirname as getDirname } from 'path'
+import { fileURLToPath } from 'node:url'
+import path, { dirname as getDirname } from 'node:path'
 import { buildConfig } from 'payload'
 import sharp from 'sharp'
 
