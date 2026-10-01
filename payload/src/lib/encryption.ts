@@ -1,4 +1,4 @@
-import crypto from 'crypto'
+import crypto from 'node:crypto'
 
 // ============================================================================
 // OWASP A04: Field-Level Data Encryption Utility (AES-256-GCM)

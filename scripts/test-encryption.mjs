@@ -1,8 +1,7 @@
 // scripts/test-encryption.mjs
 // Unit tests for AES-256-GCM Field-Level Encryption
 
-import assert from 'assert'
-import crypto from 'crypto'
+import assert from 'node:assert'
 import {
   encryptField,
   decryptField,
@@ -58,7 +57,7 @@ console.log(' PASS: Double encryption prevented')
 console.log('\nTest 5: Tamper resistance (Auth Tag check)')
 const parts = encryptedCardId.split(':')
 // Corrupt the ciphertext slightly
-const tamperedCipher = parts[4].slice(0, -2) + (parts[4].slice(-2) === 'aa' ? 'bb' : 'aa')
+const tamperedCipher = parts[4].slice(0, -2) + (parts[4].endsWith('aa') ? 'bb' : 'aa')
 const tamperedEncrypted = `${parts[0]}:${parts[1]}:${parts[2]}:${parts[3]}:${tamperedCipher}`
 const tamperedResult = decryptField(tamperedEncrypted)
 assert.strictEqual(tamperedResult, '[DECRYPTION_FAILED]', 'Tampered data must fail decryption')

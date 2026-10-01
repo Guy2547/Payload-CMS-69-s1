@@ -9,7 +9,7 @@ async function request(endpoint, options = {}) {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...(options.headers || {}),
+      ...options.headers,
     },
   })
   const text = await res.text()
@@ -99,7 +99,4 @@ async function main() {
   console.log(` docker exec 69-s1-db psql -U payload -d payload -c "SELECT id, name, card_id, salary, email FROM employees WHERE id = ${employeeId};"`)
 }
 
-main().catch((err) => {
-  console.error('Verification failed:', err)
-  process.exit(1)
-})
+await main()

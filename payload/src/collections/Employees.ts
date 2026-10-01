@@ -77,7 +77,7 @@ export const Employees: CollectionConfig = {
         if (typeof val === 'string' && isEncrypted(val)) return true
         if (
           typeof val !== 'string' ||
-          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)
+          !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val)
         ) {
           return 'Please provide a valid email address.'
         }
@@ -138,7 +138,7 @@ export const Employees: CollectionConfig = {
         if (val == null || val === '') return true
         if (typeof val === 'string' && isEncrypted(val)) return true
         const num = Number(val)
-        if (isNaN(num) || num < 0) return 'Salary must be a non-negative number.'
+        if (Number.isNaN(num) || num < 0) return 'Salary must be a non-negative number.'
         return true
       },
     },

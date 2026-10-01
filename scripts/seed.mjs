@@ -13,7 +13,7 @@ async function request(endpoint, options = {}) {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...(options.headers || {}),
+      ...options.headers,
     },
   })
   const text = await res.text()
@@ -35,7 +35,7 @@ async function waitForServer(retries = 30, delayMs = 3000) {
         console.log(`Payload CMS is ready! (HTTP ${res.status})`)
         return true
       }
-    } catch (err) {
+    } catch {
       // Server not ready yet
     }
     console.log(`Waiting for server... attempt ${i}/${retries}`)
@@ -44,20 +44,16 @@ async function waitForServer(retries = 30, delayMs = 3000) {
   throw new Error('Server did not respond in time.')
 }
 
-async function main() {
-  console.log('--- Starting Data Seeder for Payload CMS ---')
-  await waitForServer()
-
-  // 1. Register First Admin
+async function seedAdmin() {
   console.log('\n[1/5] Setting up First Admin...')
   const adminCreds = {
-    email: 'admin@cybersec.local',
-    password: 'Admin@Secure2026!',
-    firstname: 'Security',
-    lastname: 'Admin',
+    email: process.env.ADMIN_EMAIL || 'admin@cybersec.local',
+    password: process.env.ADMIN_PASSWORD || 'Admin@Secure2026!',
+    firstname: process.env.ADMIN_FIRSTNAME || 'Security',
+    lastname: process.env.ADMIN_LASTNAME || 'Admin',
   }
 
-  let adminRes = await request('/api/admins/first-register', {
+  const adminRes = await request('/api/admins/first-register', {
     method: 'POST',
     body: JSON.stringify(adminCreds),
   })
@@ -68,9 +64,8 @@ async function main() {
     console.log('First admin might already exist or responded with:', adminRes.status)
   }
 
-  // 2. Login as Admin to get JWT token
   console.log('\n[2/5] Logging in as Admin...')
-  let loginRes = await request('/api/admins/login', {
+  const loginRes = await request('/api/admins/login', {
     method: 'POST',
     body: JSON.stringify({
       email: adminCreds.email,
@@ -82,16 +77,16 @@ async function main() {
     throw new Error(`Failed to log in as admin: ${JSON.stringify(loginRes.data)}`)
   }
 
-  const token = loginRes.data.token
-  const authHeaders = { Authorization: `Bearer ${token}` }
   console.log('Logged in successfully. JWT Token acquired.')
+  return { Authorization: `Bearer ${loginRes.data.token}` }
+}
 
-  // 3. Register Regular User
+async function seedUser() {
   console.log('\n[3/5] Setting up Demo User...')
   const userCreds = {
-    email: 'demo@cybersec.local',
-    password: 'Demo@Secure2026!',
-    username: 'demouser',
+    email: process.env.DEMO_EMAIL || 'demo@cybersec.local',
+    password: process.env.DEMO_PASSWORD || 'Demo@Secure2026!',
+    username: process.env.DEMO_USERNAME || 'demouser',
   }
   const userRes = await request('/api/users', {
     method: 'POST',
@@ -102,9 +97,9 @@ async function main() {
   } else {
     console.log('Demo user register status:', userRes.status)
   }
+}
 
-  // 4. Create Departments
-  console.log('\n[4/5] Creating Departments & Positions...')
+async function seedDepartments(authHeaders) {
   const departmentsData = [
     {
       name: 'Information Security',
@@ -134,22 +129,19 @@ async function main() {
     if (res.ok && res.data?.doc?.id) {
       deptMap[dept.name] = res.data.doc.id
       console.log(` Created Department: ${dept.name} (ID: ${res.data.doc.id})`)
-    } else {
-      console.log(` Department "${dept.name}" might already exist.`)
     }
   }
 
-  // If already existed, fetch list
   if (Object.keys(deptMap).length === 0) {
     const listRes = await request('/api/departments', { headers: authHeaders })
-    if (listRes.data?.docs) {
-      for (const d of listRes.data.docs) {
-        deptMap[d.name] = d.id
-      }
+    for (const d of listRes.data?.docs || []) {
+      deptMap[d.name] = d.id
     }
   }
+  return deptMap
+}
 
-  // Positions
+async function seedPositions(authHeaders) {
   const positionsData = [
     {
       name: 'Chief Information Security Officer (CISO)',
@@ -188,22 +180,19 @@ async function main() {
     if (res.ok && res.data?.doc?.id) {
       posMap[pos.name] = res.data.doc.id
       console.log(` Created Position: ${pos.name} (ID: ${res.data.doc.id})`)
-    } else {
-      console.log(` Position "${pos.name}" might already exist.`)
     }
   }
 
-  // If already existed, fetch list
   if (Object.keys(posMap).length === 0) {
     const listRes = await request('/api/positions', { headers: authHeaders })
-    if (listRes.data?.docs) {
-      for (const p of listRes.data.docs) {
-        posMap[p.name] = p.id
-      }
+    for (const p of listRes.data?.docs || []) {
+      posMap[p.name] = p.id
     }
   }
+  return posMap
+}
 
-  // 5. Create Employees
+async function seedEmployees(authHeaders, deptMap, posMap) {
   console.log('\n[5/5] Creating Sample Employees...')
   const itDeptId = deptMap['Information Security'] || Object.values(deptMap)[0]
   const devDeptId = deptMap['Software Engineering'] || Object.values(deptMap)[1] || itDeptId
@@ -266,20 +255,27 @@ async function main() {
     })
     if (res.ok && res.data?.doc?.id) {
       console.log(` Created Employee: ${emp.name} (Salary: ${emp.salary} THB)`)
-    } else {
-      console.log(` Employee "${emp.name}" status:`, res.status)
     }
   }
+}
+
+async function main() {
+  console.log('--- Starting Data Seeder for Payload CMS ---')
+  await waitForServer()
+
+  const authHeaders = await seedAdmin()
+  await seedUser()
+
+  console.log('\n[4/5] Creating Departments & Positions...')
+  const deptMap = await seedDepartments(authHeaders)
+  const posMap = await seedPositions(authHeaders)
+
+  await seedEmployees(authHeaders, deptMap, posMap)
 
   console.log('\n=============================================')
   console.log('Data Seeding Completed Successfully!')
   console.log('Admin URL:  http://localhost:9092/admin')
-  console.log('Username:   admin@cybersec.local')
-  console.log('Password:   Admin@Secure2026!')
   console.log('=============================================\n')
 }
 
-main().catch((err) => {
-  console.error('Seeding failed:', err)
-  process.exit(1)
-})
+await main()
