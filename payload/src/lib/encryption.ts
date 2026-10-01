@@ -15,36 +15,16 @@ const PREFIX = 'enc:v1'
  * Fails closed if ENCRYPTION_KEY is missing or invalid.
  */
 export function getEncryptionKey(): Buffer {
-  const rawKey = process.env.ENCRYPTION_KEY?.trim()
-  if (!rawKey) {
-    throw new Error(
-      '[security:crypto] ENCRYPTION_KEY environment variable is not set. ' +
-        'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"',
-    )
-  }
-
-  // Support 64-char hex string (32 bytes)
-  if (rawKey.length === 64 && /^[0-9a-fA-F]+$/.test(rawKey)) {
-    return Buffer.from(rawKey, 'hex')
-  }
-
-  // Support 44-char base64 string (32 bytes)
-  if (rawKey.length === 44 && /^[A-Za-z0-9+/=]+$/.test(rawKey)) {
-    const buf = Buffer.from(rawKey, 'base64')
-    if (buf.length === 32) return buf
-  }
-
-  // Support direct 32-byte UTF-8 string
-  const utf8Buf = Buffer.from(rawKey, 'utf8')
-  if (utf8Buf.length === 32) {
-    return utf8Buf
-  }
-
-  throw new Error(
-    `[security:crypto] ENCRYPTION_KEY must be exactly 32 bytes (256 bits). ` +
-      `Received length ${rawKey.length} characters (${utf8Buf.length} bytes). ` +
-      `Expected a 64-character hex string or 44-character base64 string.`,
-  )
+  const raw = process.env.ENCRYPTION_KEY?.trim()
+  if (!raw) throw new Error('[security:crypto] ENCRYPTION_KEY environment variable is not set.')
+  const buf =
+    raw.length === 64 && /^[0-9a-fA-F]+$/.test(raw)
+      ? Buffer.from(raw, 'hex')
+      : raw.length === 44
+        ? Buffer.from(raw, 'base64')
+        : Buffer.from(raw, 'utf8')
+  if (buf.length === 32) return buf
+  throw new Error(`[security:crypto] ENCRYPTION_KEY must be exactly 32 bytes (got ${buf.length}).`)
 }
 
 /**

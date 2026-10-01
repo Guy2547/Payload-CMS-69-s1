@@ -22,15 +22,8 @@ export const Employees: CollectionConfig = {
     beforeChange: [
       ({ data }) => {
         if (data) {
-          // OWASP A04: Encrypt sensitive PII before persisting to PostgreSQL
-          if (data.cardId) {
-            data.cardId = encryptField(data.cardId)
-          }
-          if (data.salary !== undefined && data.salary !== null && data.salary !== '') {
-            data.salary = encryptField(data.salary)
-          }
-          if (data.email) {
-            data.email = encryptField(data.email)
+          for (const key of ['cardId', 'salary', 'email'] as const) {
+            if (data[key] != null && data[key] !== '') data[key] = encryptField(data[key])
           }
         }
         return data
@@ -39,15 +32,8 @@ export const Employees: CollectionConfig = {
     afterRead: [
       ({ doc }) => {
         if (doc) {
-          // Decrypt sensitive PII for authorized view in Admin UI / API
-          if (doc.cardId) {
-            doc.cardId = decryptField(doc.cardId)
-          }
-          if (doc.salary) {
-            doc.salary = decryptField(doc.salary)
-          }
-          if (doc.email) {
-            doc.email = decryptField(doc.email)
+          for (const key of ['cardId', 'salary', 'email'] as const) {
+            if (doc[key]) doc[key] = decryptField(doc[key])
           }
         }
         return doc

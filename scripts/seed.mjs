@@ -3,9 +3,7 @@
 
 const BASE_URL = process.env.PAYLOAD_URL || 'http://localhost:9092'
 
-async function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
+import { setTimeout as sleep } from 'node:timers/promises'
 
 async function request(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint}`
