@@ -6,6 +6,19 @@ import { decryptField, encryptField, isEncrypted } from '@/lib/encryption'
 // OWASP A01 Strict: authenticated read, admin-only write.
 // OWASP A04 Strict: Field-Level Data Encryption (AES-256-GCM) for sensitive PII (cardId, salary, email).
 // A05: strict field validation (length, regex & format).
+// Linear-time email shape check (single '@', dot in domain, no whitespace).
+// Equivalent strictness to the previous /^[^@\s]+@[^@\s]+\.[^@\s]+$/ pattern
+// without the super-linear backtracking (Sonar S8786).
+function isValidEmail(val: string): boolean {
+  if (/\s/.test(val)) return false
+  const at = val.indexOf('@')
+  if (at <= 0 || at !== val.lastIndexOf('@') || at === val.length - 1) return false
+  const domain = val.slice(at + 1)
+  const dot = domain.indexOf('.')
+  if (dot <= 0 || dot === domain.length - 1) return false
+  return true
+}
+
 export const Employees: CollectionConfig = {
   slug: 'employees',
   admin: {
@@ -61,10 +74,8 @@ export const Employees: CollectionConfig = {
       validate: (val: unknown) => {
         if (val == null || val === '') return true
         if (typeof val === 'string' && isEncrypted(val)) return true
-        if (
-          typeof val !== 'string' ||
-          !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val)
-        ) {
+        // Sonar S8786: linear-time check instead of backtracking regex.
+        if (typeof val !== 'string' || !isValidEmail(val)) {
           return 'Please provide a valid email address.'
         }
         return true

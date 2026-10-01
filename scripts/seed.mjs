@@ -38,9 +38,13 @@ async function waitForServer(retries = 30, delayMs = 3000) {
 
 async function seedAdmin() {
   console.log('\n[1/5] Setting up First Admin...')
+  // Sonar S2068: no default password — fail closed if env is not set.
+  if (!process.env.ADMIN_PASSWORD) {
+    throw new Error('ADMIN_PASSWORD env is required to seed (no default password).')
+  }
   const adminCreds = {
     email: process.env.ADMIN_EMAIL || 'admin@cybersec.local',
-    password: process.env.ADMIN_PASSWORD || 'Admin@Secure2026!',
+    password: process.env.ADMIN_PASSWORD,
     firstname: process.env.ADMIN_FIRSTNAME || 'Security',
     lastname: process.env.ADMIN_LASTNAME || 'Admin',
   }
@@ -75,9 +79,13 @@ async function seedAdmin() {
 
 async function seedUser() {
   console.log('\n[3/5] Setting up Demo User...')
+  // Sonar S2068: no default password — fail closed if env is not set.
+  if (!process.env.DEMO_PASSWORD) {
+    throw new Error('DEMO_PASSWORD env is required to seed (no default password).')
+  }
   const userCreds = {
     email: process.env.DEMO_EMAIL || 'demo@cybersec.local',
-    password: process.env.DEMO_PASSWORD || 'Demo@Secure2026!',
+    password: process.env.DEMO_PASSWORD,
     username: process.env.DEMO_USERNAME || 'demouser',
   }
   const userRes = await request('/api/users', {
