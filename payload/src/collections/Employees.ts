@@ -1,14 +1,21 @@
 import type { CollectionConfig } from 'payload'
 
 import { decryptField, encryptField, isEncrypted } from '@/lib/encryption'
+import {
+  cardIdFieldReadAccess,
+  cardIdFieldUpdateAccess,
+  employeesCreateAccess,
+  employeesDeleteAccess,
+  employeesReadAccess,
+  employeesUpdateAccess,
+  salaryFieldReadAccess,
+  salaryFieldUpdateAccess,
+} from '@/lib/rbac'
 
 // Company domain: employees.
-// OWASP A01 Strict: authenticated read, admin-only write.
+// OWASP A01 Strict: Role-Based Access Control (RBAC) + Row-level & Field-level security.
 // OWASP A04 Strict: Field-Level Data Encryption (AES-256-GCM) for sensitive PII (cardId, salary, email).
 // A05: strict field validation (length, regex & format).
-// Linear-time email shape check (single '@', dot in domain, no whitespace).
-// Equivalent strictness to the previous /^[^@\s]+@[^@\s]+\.[^@\s]+$/ pattern
-// without the super-linear backtracking (Sonar S8786).
 function isValidEmail(val: string): boolean {
   if (/\s/.test(val)) return false
   const at = val.indexOf('@')
@@ -26,10 +33,14 @@ export const Employees: CollectionConfig = {
     defaultColumns: ['name', 'department', 'position', 'mobile', 'email'],
   },
   access: {
-    create: ({ req }) => req.user?.collection === 'admins',
-    read: ({ req }) => Boolean(req.user),
-    update: ({ req }) => req.user?.collection === 'admins',
-    delete: ({ req }) => req.user?.collection === 'admins',
+    // Admin or HR can create employees
+    create: employeesCreateAccess,
+    // Admin & HR see all; Managers see own department; Employees see company directory
+    read: employeesReadAccess,
+    // Admin/HR can update all; Managers update own dept; Employees update self contact info
+    update: employeesUpdateAccess,
+    // Strict compliance: Only Superadmin can delete employee records
+    delete: employeesDeleteAccess,
   },
   hooks: {
     beforeChange: [
@@ -74,7 +85,6 @@ export const Employees: CollectionConfig = {
       validate: (val: unknown) => {
         if (val == null || val === '') return true
         if (typeof val === 'string' && isEncrypted(val)) return true
-        // Sonar S8786: linear-time check instead of backtracking regex.
         if (typeof val !== 'string' || !isValidEmail(val)) {
           return 'Please provide a valid email address.'
         }
@@ -97,11 +107,14 @@ export const Employees: CollectionConfig = {
       name: 'cardId',
       type: 'text',
       admin: {
-        description: '13-digit National ID (Encrypted at rest with AES-256-GCM).',
+        description: '13-digit National ID (Encrypted at rest with AES-256-GCM, RBAC restricted).',
+      },
+      access: {
+        read: cardIdFieldReadAccess,
+        update: cardIdFieldUpdateAccess,
       },
       validate: (val: unknown) => {
         if (val == null || val === '') return true
-        // Allow already encrypted strings if passed during internal operations
         if (typeof val === 'string' && isEncrypted(val)) return true
         if (typeof val !== 'string' || !/^[0-9]{13}$/.test(val)) {
           return 'CardId must be exactly 13 digits.'
@@ -129,7 +142,11 @@ export const Employees: CollectionConfig = {
       name: 'salary',
       type: 'text',
       admin: {
-        description: 'Compensation in THB (Encrypted at rest with AES-256-GCM).',
+        description: 'Compensation in THB (Encrypted at rest with AES-256-GCM, RBAC restricted).',
+      },
+      access: {
+        read: salaryFieldReadAccess,
+        update: salaryFieldUpdateAccess,
       },
       validate: (val: unknown) => {
         if (val == null || val === '') return true

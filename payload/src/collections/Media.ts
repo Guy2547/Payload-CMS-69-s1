@@ -1,19 +1,21 @@
 import { ValidationError, type CollectionConfig } from 'payload'
 
+import { isHR, isAdmin, isManager } from '@/lib/rbac'
+
 // 5MB per-file cap (A08 storage-abuse bound). Payload v3 has no
 // `maxFileSize` upload option, so enforce it in beforeChange via req.file.
 const MAX_FILE_BYTES = 5 * 1024 * 1024
 
-// OWASP A01/A08 Strict: authenticated read, admin-only upload.
+// OWASP A01/A08 Strict: authenticated read, Admin/HR/Manager upload, Admin-only delete.
 // mimeTypes whitelist blocks executables/scripts (incl. SVG XSS vector),
-// 5MB cap bounds storage abuse. No admin UI needed beyond default.
+// 5MB cap bounds storage abuse.
 export const Media: CollectionConfig = {
   slug: 'media',
   access: {
-    create: ({ req }) => req.user?.collection === 'admins',
+    create: ({ req }) => isAdmin(req.user) || isHR(req.user) || isManager(req.user),
     read: ({ req }) => Boolean(req.user),
-    update: ({ req }) => req.user?.collection === 'admins',
-    delete: ({ req }) => req.user?.collection === 'admins',
+    update: ({ req }) => isAdmin(req.user),
+    delete: ({ req }) => isAdmin(req.user),
   },
   hooks: {
     beforeChange: [
@@ -38,8 +40,6 @@ export const Media: CollectionConfig = {
   upload: {
     // A08: images only — svg (scriptable), pdf/html/exe all rejected.
     mimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
-    // Per-file cap; Payload checks `file.size` against `filesize` limits
-    // via upload config — enforced again at the reverse-proxy level.
     imageSizes: [
       {
         name: 'thumbnail',
@@ -49,7 +49,6 @@ export const Media: CollectionConfig = {
       },
     ],
     adminThumbnail: 'thumbnail',
-    // Disallow pasting arbitrary remote URLs as files (SSRF-adjacent, A01).
     pasteURL: false,
   },
 }

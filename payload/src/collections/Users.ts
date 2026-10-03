@@ -1,6 +1,14 @@
 import type { CollectionConfig } from 'payload'
 
 import {
+  isAdmin,
+  roleFieldAccess,
+  userDepartmentFieldAccess,
+  usersDeleteAccess,
+  usersReadAccess,
+  usersUpdateAccess,
+} from '@/lib/rbac'
+import {
   auditLog,
   enforcePasswordPolicy,
   forgotRateLimit,
@@ -13,14 +21,14 @@ import {
 // otherwise leave it off so the homework register→login flow still works.
 const emailVerificationEnabled = Boolean(process.env.EMAIL_SMTP_USER)
 
-// Mirrors the old Strapi "users" (users-permissions) world:
-// public register, login with email+password, forgot/reset, me.
-// Lives under /api/users/*.
-// OWASP A01 Strict: users can only see themselves; listing all users is admin-only.
+// Users collection with Role-Based Access Control (RBAC):
+// Roles: 'admin', 'hr', 'manager', 'employee'
+// OWASP Top 10:2025 A01: Broken Access Control & Privilege Escalation Mitigation
 export const Users: CollectionConfig = {
   slug: 'users',
   admin: {
     useAsTitle: 'email',
+    defaultColumns: ['email', 'username', 'role', 'department'],
   },
   auth: {
     tokenExpiration: 7200,
@@ -37,26 +45,14 @@ export const Users: CollectionConfig = {
     },
   },
   access: {
-    // Public registration (like Strapi POST /api/auth/local/register),
-    // throttled by registerRateLimit in beforeOperation below.
+    // Public registration allowed (defaults to 'employee' role), throttled by registerRateLimit
     create: () => true,
-    // Strict: admins can list everyone, users can only read themselves.
-    read: ({ req }) => {
-      if (!req.user) return false
-      if (req.user.collection === 'admins') return true
-      return { id: { equals: req.user.id } }
-    },
-    // Users can edit themselves, admins can edit anyone
-    update: ({ req }) => {
-      if (!req.user) return false
-      if (req.user.collection === 'admins') return true
-      return { id: { equals: req.user.id } }
-    },
-    delete: ({ req }) => {
-      if (!req.user) return false
-      if (req.user.collection === 'admins') return true
-      return { id: { equals: req.user.id } }
-    },
+    // Admin & HR can list all users; Managers and regular Employees can only view themselves
+    read: usersReadAccess,
+    // Admin can update all users; regular users can only update their own profile (cannot escalate role)
+    update: usersUpdateAccess,
+    // Superadmin only
+    delete: usersDeleteAccess,
   },
   hooks: {
     beforeOperation: [
@@ -68,18 +64,28 @@ export const Users: CollectionConfig = {
       },
     ],
     beforeValidate: [
-      ({ data, operation }) => {
+      ({ data, operation, req }) => {
+        // Enforce strong password policy
         if (
           (operation === 'create' || (data as { password?: unknown })?.password) &&
           typeof (data as { password?: unknown })?.password === 'string'
         ) {
           enforcePasswordPolicy((data as { password: string }).password)
         }
+
+        // Defense-in-Depth against Privilege Escalation (CWE-269):
+        // If a non-admin attempts to assign any role other than 'employee', force it to 'employee'
+        if (data && 'role' in data && data.role !== 'employee' && !isAdmin(req.user)) {
+          ;(data as { role: string }).role = 'employee'
+        }
       },
     ],
     afterLogin: [
       ({ req, user }) => {
-        auditLog(req, 'user.login', { email: (user as { email?: string })?.email })
+        auditLog(req, 'user.login', {
+          email: (user as { email?: string })?.email,
+          role: (user as { role?: string })?.role,
+        })
       },
     ],
     afterForgotPassword: [
@@ -102,6 +108,39 @@ export const Users: CollectionConfig = {
           return 'Username may only contain letters, numbers, dot, underscore and dash.'
         }
         return true
+      },
+    },
+    {
+      name: 'role',
+      type: 'select',
+      required: true,
+      defaultValue: 'employee',
+      saveToJWT: true,
+      options: [
+        { label: 'Administrator', value: 'admin' },
+        { label: 'HR Specialist', value: 'hr' },
+        { label: 'Department Manager', value: 'manager' },
+        { label: 'Employee', value: 'employee' },
+      ],
+      access: {
+        create: roleFieldAccess,
+        update: roleFieldAccess,
+      },
+      admin: {
+        description: 'Assigned RBAC role (Admin-only modification). Defaults to Employee.',
+      },
+    },
+    {
+      name: 'department',
+      type: 'relationship',
+      relationTo: 'departments',
+      saveToJWT: true,
+      access: {
+        create: userDepartmentFieldAccess,
+        update: userDepartmentFieldAccess,
+      },
+      admin: {
+        description: 'Associated department for scoped access (HR/Admin managed).',
       },
     },
   ],

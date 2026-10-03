@@ -1,223 +1,238 @@
-#1.ADMIN (collection: admins -> /api/admins/*)
+### ==============================================================================
+### Payload CMS - Role-Based Access Control (RBAC) REST Client Suite
+### OWASP Top 10:2025 A01: Broken Access Control & Privilege Escalation Mitigation
+### ==============================================================================
 
-##1.1 Signup (first admin ONLY - works while admins collection is empty)
-POST http://localhost:9092/api/admins/first-register
-content-type: application/json
+@baseUrl = http://localhost:9092
+@password = SecPass12345!
 
-{
-  "email": "",
-  "password": "",
-  "firstname": "",
-  "lastname": ""
-}
-###
+### ------------------------------------------------------------------------------
+### 1. AUTHENTICATION & LOGIN FOR RBAC ROLES
+### ------------------------------------------------------------------------------
 
-##1.2 Login
-# @name login
-POST http://localhost:9092/api/admins/login
-content-type: application/json
+### 1.1 Superadmin Login (Admins Collection)
+# @name adminLogin
+POST {{baseUrl}}/api/admins/login
+Content-Type: application/json
 
 {
-  "email": "",
-  "password": ""
+  "email": "admin@cybersec.local",
+  "password": "{{password}}"
 }
-###
 
-##1.3 adminForgot
-# @name adminForgot
-POST http://localhost:9092/api/admins/forgot-password
-content-type: application/json
+### 1.2 HR Specialist Login (Role: 'hr')
+# @name hrLogin
+POST {{baseUrl}}/api/users/login
+Content-Type: application/json
 
 {
-  "email": ""
+  "email": "hr_user@cybersec.local",
+  "password": "{{password}}"
 }
-###
 
-##1.3.1 Reset password (token from admins.reset_password_token in DB, 40 chars)
-POST http://localhost:9092/api/admins/reset-password
-content-type: application/json
+### 1.3 Department Manager Login (Role: 'manager')
+# @name managerLogin
+POST {{baseUrl}}/api/users/login
+Content-Type: application/json
 
 {
-  "token": "PASTE_TOKEN_HERE",
-  "password": ""
+  "email": "manager_user@cybersec.local",
+  "password": "{{password}}"
 }
-###
 
-##1.4 Profile
-GET http://localhost:9092/api/admins/me
-Authorization: Bearer {{login.response.body.$.token}}
-###
-
-#2. User (collection: users -> /api/users/*)
-
-##2.1 Signup (public register)
-POST http://localhost:9092/api/users
-content-type: application/json
+### 1.4 Regular Employee Login (Role: 'employee')
+# @name employeeLogin
+POST {{baseUrl}}/api/users/login
+Content-Type: application/json
 
 {
-  "email": "",
-  "password": "",
-  "username": ""
+  "email": "somchai.j@cybersec.local",
+  "password": "{{password}}"
 }
-###
 
-##2.2 Login
-# @name userLogin
-POST http://localhost:9092/api/users/login
-content-type: application/json
+
+### ------------------------------------------------------------------------------
+### 2. PRIVILEGE ESCALATION DEFENSE (OWASP A01 TEST)
+### ------------------------------------------------------------------------------
+
+### 2.1 Public Register Attack: Attempt to self-assign "role": "admin"
+# Expected: 201 Created, but returned 'role' MUST be forced to 'employee' (Defense in Depth)
+# @name attackRegister
+POST {{baseUrl}}/api/users
+Content-Type: application/json
 
 {
-  "email": "",
-  "password": ""
+  "email": "attacker@cybersec.local",
+  "username": "attacker",
+  "password": "{{password}}",
+  "role": "admin"
 }
-###
 
-##2.3 userForgot
-# @name userForgot
-POST http://localhost:9092/api/users/forgot-password
-content-type: application/json
+### 2.2 Verify Attacker Profile (Check that role is 'employee', NOT 'admin')
+# @name attackerLogin
+POST {{baseUrl}}/api/users/login
+Content-Type: application/json
 
 {
-  "email": ""
+  "email": "attacker@cybersec.local",
+  "password": "{{password}}"
 }
-###
 
-##2.3.1 Reset password (token from users.reset_password_token in DB, 40 chars)
-POST http://localhost:9092/api/users/reset-password
-content-type: application/json
+###
+GET {{baseUrl}}/api/users/me
+Authorization: Bearer {{attackerLogin.response.body.$.token}}
+
+
+### ------------------------------------------------------------------------------
+### 3. ROLE: HR SPECIALIST (Full Employee CRUD & Salary Visibility)
+### ------------------------------------------------------------------------------
+
+### 3.1 HR: List All Employees (Should see all records + decrypted salaries)
+GET {{baseUrl}}/api/employees
+Authorization: Bearer {{hrLogin.response.body.$.token}}
+
+### 3.2 HR: Create New Employee (Allowed for HR)
+# @name hrCreateEmployee
+POST {{baseUrl}}/api/employees
+Content-Type: application/json
+Authorization: Bearer {{hrLogin.response.body.$.token}}
 
 {
-  "token": "PASTE_TOKEN_HERE",
-  "password": ""
+  "name": "Nattapong CyberGuard",
+  "email": "nattapong.c@cybersec.local",
+  "mobile": "0891112233",
+  "cardId": "1100400998877",
+  "department": 1,
+  "position": 2,
+  "salary": 75000
 }
-###
 
-##2.4 Profile
-GET http://localhost:9092/api/users/me
-Authorization: Bearer {{userLogin.response.body.$.token}}
-###
-
-#3. Content (NOTE: Payload body is flat, NO {"data":...} wrapper; update = PATCH)
-# Strict: ADMIN token required for create/update/delete.
-
-##3.1 Department
-
-###3.1.1 Create Department
-# @name createDepartment
-POST http://localhost:9092/api/departments
-content-type: application/json
-Authorization: Bearer {{login.response.body.$.token}}
+### 3.3 HR: Update Employee Salary (Allowed for HR)
+PATCH {{baseUrl}}/api/employees/{{hrCreateEmployee.response.body.$.doc.id}}
+Content-Type: application/json
+Authorization: Bearer {{hrLogin.response.body.$.token}}
 
 {
-  "name": "",
-  "description": ""
+  "salary": 80000
 }
-###
 
-###3.1.2 List All Departments
-GET http://localhost:9092/api/departments
-Authorization: Bearer {{login.response.body.$.token}}
-###
+### 3.4 HR: Attempt to Delete Employee (Forbidden: 403 - Only Superadmin can delete)
+DELETE {{baseUrl}}/api/employees/{{hrCreateEmployee.response.body.$.doc.id}}
+Authorization: Bearer {{hrLogin.response.body.$.token}}
 
-###3.1.3 Get Department by ID
-GET http://localhost:9092/api/departments/{{createDepartment.response.body.$.doc.id}}
-Authorization: Bearer {{login.response.body.$.token}}
-###
 
-###3.1.4 Update Department
-PATCH http://localhost:9092/api/departments/{{createDepartment.response.body.$.doc.id}}
-content-type: application/json
-Authorization: Bearer {{login.response.body.$.token}}
+### ------------------------------------------------------------------------------
+### 4. ROLE: DEPARTMENT MANAGER (Scoped Access, Sensitive PII Hidden)
+### ------------------------------------------------------------------------------
+
+### 4.1 Manager: List Employees (Should see employees, but 'salary' & 'cardId' are stripped)
+GET {{baseUrl}}/api/employees
+Authorization: Bearer {{managerLogin.response.body.$.token}}
+
+### 4.2 Manager: Attempt to Create Employee (Forbidden: 403)
+POST {{baseUrl}}/api/employees
+Content-Type: application/json
+Authorization: Bearer {{managerLogin.response.body.$.token}}
 
 {
-  "description": ""
+  "name": "Unauthorized Add",
+  "email": "unauth@cybersec.local",
+  "department": 1,
+  "position": 1
 }
-###
 
-###3.1.5 Delete Department
-DELETE http://localhost:9092/api/departments/{{createDepartment.response.body.$.doc.id}}
-Authorization: Bearer {{login.response.body.$.token}}
-###
-
-##3.2 Position
-
-###3.2.1 Create Position
-# @name createPosition
-POST http://localhost:9092/api/positions
-content-type: application/json
-Authorization: Bearer {{login.response.body.$.token}}
+### 4.3 Manager: Update Employee Mobile in Own Department (Allowed)
+PATCH {{baseUrl}}/api/employees/1
+Content-Type: application/json
+Authorization: Bearer {{managerLogin.response.body.$.token}}
 
 {
-  "name": "",
-  "level": "junior",
-  "description": ""
+  "mobile": "0819998877"
 }
-###
 
-###3.2.2 List All Positions
-GET http://localhost:9092/api/positions
-Authorization: Bearer {{login.response.body.$.token}}
-###
-
-###3.2.3 Get Position by ID
-GET http://localhost:9092/api/positions/{{createPosition.response.body.$.doc.id}}
-Authorization: Bearer {{login.response.body.$.token}}
-###
-
-###3.2.4 Update Position
-PATCH http://localhost:9092/api/positions/{{createPosition.response.body.$.doc.id}}
-content-type: application/json
-Authorization: Bearer {{login.response.body.$.token}}
+### 4.4 Manager: Attempt to Tamper with Salary (Forbidden / Stripped by Field Access)
+PATCH {{baseUrl}}/api/employees/1
+Content-Type: application/json
+Authorization: Bearer {{managerLogin.response.body.$.token}}
 
 {
-  "description": ""
+  "salary": 999999
 }
-###
 
-###3.2.5 Delete Position
-DELETE http://localhost:9092/api/positions/{{createPosition.response.body.$.doc.id}}
-Authorization: Bearer {{login.response.body.$.token}}
-###
 
-##3.3 Employee
+### ------------------------------------------------------------------------------
+### 5. ROLE: REGULAR EMPLOYEE (Self-Service View, Directory Browsing)
+### ------------------------------------------------------------------------------
 
-###3.3.1 Create Employee
-# @name createEmployee
-POST http://localhost:9092/api/employees
-content-type: application/json
-Authorization: Bearer {{login.response.body.$.token}}
+### 5.1 Employee: Browse Public Company Directory (Allowed, salaries hidden)
+GET {{baseUrl}}/api/employees
+Authorization: Bearer {{employeeLogin.response.body.$.token}}
+
+### 5.2 Employee: View Own Record (Matching email: somchai.j@cybersec.local)
+# Allowed to see their OWN salary and cardId!
+GET {{baseUrl}}/api/employees?where[email][equals]=somchai.j@cybersec.local
+Authorization: Bearer {{employeeLogin.response.body.$.token}}
+
+### 5.3 Employee: Attempt to Create Employee (Forbidden: 403)
+POST {{baseUrl}}/api/employees
+Content-Type: application/json
+Authorization: Bearer {{employeeLogin.response.body.$.token}}
 
 {
-  "name": "",
-  "mobile": "",
-  "cardId": "",
-  "department": "{{createDepartment.response.body.$.doc.id}}",
-  "position": "{{createPosition.response.body.$.doc.id}}",
-  "salary": 0
+  "name": "Fake Employee"
 }
-###
 
-###3.3.2 List All Employees
-GET http://localhost:9092/api/employees
-Authorization: Bearer {{login.response.body.$.token}}
-###
+### 5.4 Employee: Attempt to Delete Record (Forbidden: 403)
+DELETE {{baseUrl}}/api/employees/1
+Authorization: Bearer {{employeeLogin.response.body.$.token}}
 
-###3.3.3 Get Employee by ID
-GET http://localhost:9092/api/employees/{{createEmployee.response.body.$.doc.id}}
-Authorization: Bearer {{login.response.body.$.token}}
-###
 
-###3.3.4 Update Employee
-PATCH http://localhost:9092/api/employees/{{createEmployee.response.body.$.doc.id}}
-content-type: application/json
-Authorization: Bearer {{login.response.body.$.token}}
+### ------------------------------------------------------------------------------
+### 6. ROLE: SUPERADMIN (Admins Collection or 'admin' Role)
+### ------------------------------------------------------------------------------
+
+### 6.1 Admin: List All Users & Assigned Roles
+GET {{baseUrl}}/api/users
+Authorization: Bearer {{adminLogin.response.body.$.token}}
+
+### 6.2 Admin: Elevate User Role (Only Admin can modify 'role' field)
+PATCH {{baseUrl}}/api/users/1
+Content-Type: application/json
+Authorization: Bearer {{adminLogin.response.body.$.token}}
 
 {
-  "name": ""
+  "role": "hr"
 }
-###
 
-###3.3.5 Delete Employee
-DELETE http://localhost:9092/api/employees/{{createEmployee.response.body.$.doc.id}}
-Authorization: Bearer {{login.response.body.$.token}}
-###
+### 6.3 Admin: Delete Employee Record (Allowed for Superadmin)
+DELETE {{baseUrl}}/api/employees/{{hrCreateEmployee.response.body.$.doc.id}}
+Authorization: Bearer {{adminLogin.response.body.$.token}}
+
+
+### ------------------------------------------------------------------------------
+### 7. AUXILIARY COLLECTIONS (Departments & Positions & Media)
+### ------------------------------------------------------------------------------
+
+### 7.1 Read Departments (All Authenticated Users)
+GET {{baseUrl}}/api/departments
+Authorization: Bearer {{employeeLogin.response.body.$.token}}
+
+### 7.2 Create Department (Forbidden for Employee, Allowed only for Superadmin)
+POST {{baseUrl}}/api/departments
+Content-Type: application/json
+Authorization: Bearer {{employeeLogin.response.body.$.token}}
+
+{
+  "name": "Illegal Department"
+}
+
+### 7.3 HR: Create Job Position (Allowed for HR & Admin)
+POST {{baseUrl}}/api/positions
+Content-Type: application/json
+Authorization: Bearer {{hrLogin.response.body.$.token}}
+
+{
+  "name": "DevSecOps Specialist",
+  "level": "senior",
+  "description": "Security in CI/CD pipeline automation"
+}

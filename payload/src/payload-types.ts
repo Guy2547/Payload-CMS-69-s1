@@ -179,6 +179,8 @@ export interface Admin {
 export interface User {
   id: number;
   username: string;
+  role: 'admin' | 'hr' | 'manager' | 'employee';
+  department?: (number | null) | Department;
   updatedAt: string;
   createdAt: string;
   email: string;

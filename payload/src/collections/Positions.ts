@@ -1,7 +1,9 @@
 import type { CollectionConfig } from 'payload'
 
+import { isHR, isAdmin } from '@/lib/rbac'
+
 // Company domain: positions/roles (e.g. Developer, Manager).
-// OWASP A01 Strict: authenticated read, admin-only write. A05: length cap.
+// OWASP A01 Strict: RBAC access — authenticated read, HR/Admin create & update, Admin-only delete.
 export const Positions: CollectionConfig = {
   slug: 'positions',
   admin: {
@@ -9,10 +11,10 @@ export const Positions: CollectionConfig = {
     defaultColumns: ['name', 'level'],
   },
   access: {
-    create: ({ req }) => req.user?.collection === 'admins',
+    create: ({ req }) => isHR(req.user),
     read: ({ req }) => Boolean(req.user),
-    update: ({ req }) => req.user?.collection === 'admins',
-    delete: ({ req }) => req.user?.collection === 'admins',
+    update: ({ req }) => isHR(req.user),
+    delete: ({ req }) => isAdmin(req.user),
   },
   fields: [
     {
