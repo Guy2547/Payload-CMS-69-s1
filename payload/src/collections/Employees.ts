@@ -48,8 +48,9 @@ export const Employees: CollectionConfig = {
     beforeOperation: [
       async ({ args, operation, req }) => {
         // Transparent query resolution for encrypted 'email' field
-        if ((operation === 'read' || operation === 'update') && args?.where) {
-          const whereEmail = (args.where as Record<string, any>)?.email?.equals
+        const queryArgs = args as { where?: Record<string, any> } | undefined
+        if ((operation === 'read' || operation === 'update') && queryArgs?.where) {
+          const whereEmail = queryArgs.where?.email?.equals
           if (typeof whereEmail === 'string') {
             try {
               const all = await req.payload.find({
@@ -68,11 +69,11 @@ export const Employees: CollectionConfig = {
                 .map((doc: any) => doc.id)
 
               if (matchedIds.length > 0) {
-                ;(args.where as Record<string, any>).id = { in: matchedIds }
+                queryArgs.where.id = { in: matchedIds }
               } else {
-                ;(args.where as Record<string, any>).id = { equals: -1 }
+                queryArgs.where.id = { equals: -1 }
               }
-              delete (args.where as Record<string, any>).email
+              delete queryArgs.where.email
             } catch {
               // Fallback
             }

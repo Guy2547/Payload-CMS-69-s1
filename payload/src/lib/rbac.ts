@@ -1,4 +1,4 @@
-import type { Access, FieldAccess } from 'payload'
+import type { Access, FieldAccess, Where } from 'payload'
 
 import { decryptField, isEncrypted } from '@/lib/encryption'
 
@@ -154,13 +154,13 @@ export const employeesUpdateAccess: Access = ({ req: { user } }) => {
   if (isManager(user)) {
     const deptId = getUserDepartmentId(user)
     if (deptId) {
-      return { department: { equals: deptId } }
+      return { department: { equals: deptId } } as Where
     }
   }
 
   // Regular employee can update their own contact details
   if (user.email) {
-    return { email: { equals: user.email } }
+    return { email: { equals: user.email } } as Where
   }
 
   return false
