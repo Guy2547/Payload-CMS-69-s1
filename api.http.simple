@@ -15,20 +15,22 @@
 ###   Departments write = Admin only; Positions write = Admin/HR;
 ###   Media upload = Admin/HR/Manager, read = any login, delete = Admin only.
 
-@baseUrl = http://localhost:9092
-@adminEmail = admin@cybersec.local
-@adminPassword = SecPass12345!
-@adminFirstname = Security
-@adminLastname = Admin
-@adminForgotEmail = admin@cybersec.local
-@userForgotEmail = somchai.j@cybersec.local
-@password = SecPass12345!
-@adminUserEmail = admin_user@cybersec.local
-@hrEmail = hr_user@cybersec.local
-@managerEmail = manager_user@cybersec.local
-@employeeEmail = somchai.j@cybersec.local
-@attackerEmail = attacker@cybersec.local
-@attackerUsername = attacker
+@baseUrl =
+@adminEmail =
+@adminPassword =
+@adminFirstname =
+@adminLastname =
+@adminForgotEmail =
+@userForgotEmail =
+@password =
+@adminUserEmail =
+@hrEmail =
+@managerEmail =
+@employeeEmail =
+@attackerEmail =
+@attackerUsername =
+### FILL IN the 14 variables above before running (no real values are committed).
+### Seed accounts: see README section 3 / scripts/seed.mjs (run node scripts/seed.mjs first).
 
 ### ------------------------------------------------------------------------------
 ### 1. ADMINS COLLECTION (/api/admins/*) - Superadmin via admins collection
@@ -63,13 +65,13 @@ Content-Type: application/json
   "email": "{{adminForgotEmail}}"
 }
 
-### 1.4 Superadmin Reset Password (paste token from DB; bad token = 403)
+### 1.4 Superadmin Reset Password (paste token from DB + fill your own new password; bad token = 403)
 POST {{baseUrl}}/api/admins/reset-password
 Content-Type: application/json
 
 {
   "token": "PASTE_TOKEN_HERE",
-  "password": "NewAdminPass123!"
+  "password": ""
 }
 
 ### 1.5 Superadmin Profile
@@ -431,13 +433,13 @@ Content-Type: application/json
   "email": "{{userForgotEmail}}"
 }
 
-### 11.2 User Reset Password (paste token from DB; bad token = 403)
+### 11.2 User Reset Password (paste token from DB + fill your own new password; bad token = 403)
 POST {{baseUrl}}/api/users/reset-password
 Content-Type: application/json
 
 {
   "token": "PASTE_TOKEN_HERE",
-  "password": "NewUserPass123!"
+  "password": ""
 }
 
 ### 11.3 HR Profile (self)
