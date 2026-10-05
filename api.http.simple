@@ -1,37 +1,31 @@
 ### ==============================================================================
-### Payload CMS - RBAC REST Client Suite (OWASP Top 10 Hardened)
-### CWE-798: No Hard-coded Credentials | CWE-359: Sensitive PII Protection
-### README sections 2 (RBAC matrix) + 3 (seed accounts) + 5.1 (4 verification steps)
-### OWASP Top 10:2025 A01 Broken Access Control & Privilege Escalation Mitigation
+### Payload CMS - RBAC REST Client Suite (Skeleton Template)
+### OWASP Top 10 Compliant: Zero Hardcoded Credentials (CWE-798 / CWE-359)
 ### ==============================================================================
-### Prerequisites (run once):
-###   docker compose up -d --build
-###   node scripts/seed.mjs        <- creates the 5 seed accounts below
-### Run requests TOP-TO-BOTTOM: # @name variables chain into later requests.
-### Payload body is flat (NO {"data":...} wrapper); update = PATCH.
-### Password policy: min 12 chars + 3 of 4 classes (lower/upper/digit/symbol).
-### RBAC quick map: Employees create = Admin/HR; delete = Admin only;
-###   salary/cardId visible to Admin/HR/self only (stripped for Manager/peers);
-###   Departments write = Admin only; Positions write = Admin/HR;
-###   Media upload = Admin/HR/Manager, read = any login, delete = Admin only.
+### USAGE:
+### 1. Fill in the skeleton variables below before running, OR
+### 2. Copy to 'api.http' (gitignored) and load dynamically from your local .env
 ### ==============================================================================
 
-@baseUrl = http://localhost:9092
-@password = {{$dotenv RBAC_PASSWORD}}
-@adminEmail = {{$dotenv ADMIN_EMAIL}}
-@adminPassword = {{$dotenv ADMIN_PASSWORD}}
-@adminFirstname = {{$dotenv ADMIN_FIRSTNAME}}
-@adminLastname = {{$dotenv ADMIN_LASTNAME}}
-@adminForgotEmail = {{$dotenv ADMIN_FORGOT_EMAIL}}
-@adminUserEmail = {{$dotenv RBAC_ADMIN_USER_EMAIL}}
-@hrEmail = {{$dotenv RBAC_HR_EMAIL}}
-@managerEmail = {{$dotenv RBAC_MANAGER_EMAIL}}
-@employeeEmail = {{$dotenv RBAC_EMPLOYEE_EMAIL}}
-@attackerEmail = {{$dotenv RBAC_ATTACKER_EMAIL}}
-@attackerUsername = {{$dotenv RBAC_ATTACKER_USERNAME}}
-@userForgotEmail = {{$dotenv USER_FORGOT_EMAIL}}
-@testCardId = {{$dotenv TEST_EMPLOYEE_CARD_ID}}
-@testSalary = {{$dotenv TEST_EMPLOYEE_SALARY}}
+@baseUrl =
+@adminEmail =
+@adminPassword =
+@adminFirstname =
+@adminLastname =
+@adminForgotEmail =
+@adminUserEmail =
+@password =
+@hrEmail =
+@managerEmail =
+@employeeEmail =
+@attackerEmail =
+@attackerUsername =
+@userForgotEmail =
+@testEmpName =
+@testEmpEmail =
+@testEmpMobile =
+@testCardId =
+@testSalary =
 
 ### ------------------------------------------------------------------------------
 ### 1. ADMINS COLLECTION (/api/admins/*) - Superadmin via admins collection
@@ -174,9 +168,9 @@ Content-Type: application/json
 Authorization: Bearer {{hrLogin.response.body.$.token}}
 
 {
-  "name": "Nattapong CyberGuard",
-  "email": "nattapong.c@cybersec.local",
-  "mobile": "0891112233",
+  "name": "{{testEmpName}}",
+  "email": "{{testEmpEmail}}",
+  "mobile": "{{testEmpMobile}}",
   "cardId": "{{testCardId}}",
   "department": 1,
   "position": 2,
@@ -188,7 +182,7 @@ Authorization: Bearer {{hrLogin.response.body.$.token}}
 GET {{baseUrl}}/api/employees/{{hrCreateEmployee.response.body.$.doc.id}}
 Authorization: Bearer {{hrLogin.response.body.$.token}}
 
-### 4.4 HR: Update Employee Salary (200 Allowed for HR)
+### 4.4 HR Update Employee Salary (200 Allowed for HR)
 PATCH {{baseUrl}}/api/employees/{{hrCreateEmployee.response.body.$.doc.id}}
 Content-Type: application/json
 Authorization: Bearer {{hrLogin.response.body.$.token}}
@@ -216,12 +210,12 @@ Authorization: Bearer {{managerLogin.response.body.$.token}}
 
 {
   "name": "Unauthorized Add",
-  "email": "unauth@cybersec.local",
-  "mobile": "0811112222",
-  "cardId": "1100400998899",
+  "email": "unauth@example.com",
+  "mobile": "0800000000",
+  "cardId": "0000000000000",
   "department": 1,
   "position": 1,
-  "salary": "50000"
+  "salary": "0"
 }
 
 ### 5.3 Manager: Update Employee Mobile In Own Department (200 Allowed - contact info only)
@@ -261,7 +255,7 @@ Authorization: Bearer {{employeeLogin.response.body.$.token}}
 
 {
   "name": "Fake Employee",
-  "email": "fake@cybersec.local",
+  "email": "fake@example.com",
   "department": 1,
   "position": 1
 }
