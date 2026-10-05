@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -7,6 +8,7 @@ import {
   employeesDeleteAccess,
   employeesReadAccess,
   employeesUpdateAccess,
+  getUserDepartmentId,
   isAdmin,
   isHR,
   isManager,
@@ -17,6 +19,7 @@ import {
   usersReadAccess,
   usersUpdateAccess,
 } from '../../src/lib/rbac'
+import { encryptField } from '../../src/lib/encryption'
 
 describe('Role-Based Access Control (RBAC) Test Suite', () => {
   const superadminUser: AppUser = { id: 1, collection: 'admins' }
@@ -67,6 +70,14 @@ describe('Role-Based Access Control (RBAC) Test Suite', () => {
       expect(isManager(adminUser)).toBe(true)
       expect(isManager(managerUser)).toBe(true)
       expect(isManager(employeeUser)).toBe(false)
+    })
+
+    it('safely parses user department from numbers, strings, and relationship objects', () => {
+      expect(getUserDepartmentId({ department: 1 })).toBe(1)
+      expect(getUserDepartmentId({ department: '2' as any })).toBe(2)
+      expect(getUserDepartmentId({ department: { id: 3 } })).toBe(3)
+      expect(getUserDepartmentId({ department: null })).toBeNull()
+      expect(getUserDepartmentId(undefined)).toBeNull()
     })
   })
 
@@ -143,6 +154,21 @@ describe('Role-Based Access Control (RBAC) Test Suite', () => {
       expect(cardIdFieldReadAccess({ req: { user: employeeUser }, doc: somchaiDoc } as any)).toBe(true)
       expect(cardIdFieldReadAccess({ req: { user: managerUser }, doc: somchaiDoc } as any)).toBe(false)
       expect(cardIdFieldReadAccess({ req: { user: otherEmployeeUser }, doc: somchaiDoc } as any)).toBe(false)
+    })
+
+    it('allows Employee to read their OWN salary and cardId even when email in document is encrypted at rest', () => {
+      if (!process.env.ENCRYPTION_KEY) {
+        process.env.ENCRYPTION_KEY = crypto.randomBytes(32).toString('hex')
+      }
+      const encryptedDoc = {
+        email: encryptField('somchai.j@cybersec.local'),
+        salary: encryptField(150000),
+        cardId: encryptField('1100400123451'),
+      }
+      expect(salaryFieldReadAccess({ req: { user: employeeUser }, doc: encryptedDoc } as any)).toBe(true)
+      expect(cardIdFieldReadAccess({ req: { user: employeeUser }, doc: encryptedDoc } as any)).toBe(true)
+      expect(salaryFieldReadAccess({ req: { user: otherEmployeeUser }, doc: encryptedDoc } as any)).toBe(false)
+      expect(cardIdFieldReadAccess({ req: { user: otherEmployeeUser }, doc: encryptedDoc } as any)).toBe(false)
     })
   })
 

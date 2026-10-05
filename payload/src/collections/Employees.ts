@@ -8,6 +8,8 @@ import {
   employeesDeleteAccess,
   employeesReadAccess,
   employeesUpdateAccess,
+  hrOnlyFieldUpdateAccess,
+  isHR,
   salaryFieldReadAccess,
   salaryFieldUpdateAccess,
 } from '@/lib/rbac'
@@ -43,6 +45,55 @@ export const Employees: CollectionConfig = {
     delete: employeesDeleteAccess,
   },
   hooks: {
+    beforeOperation: [
+      async ({ args, operation, req }) => {
+        // Transparent query resolution for encrypted 'email' field
+        if ((operation === 'read' || operation === 'update') && args?.where) {
+          const whereEmail = (args.where as Record<string, any>)?.email?.equals
+          if (typeof whereEmail === 'string') {
+            try {
+              const all = await req.payload.find({
+                collection: 'employees',
+                depth: 0,
+                pagination: false,
+                overrideAccess: true,
+              })
+              const target = whereEmail.toLowerCase()
+              const matchedIds = (all.docs as any[])
+                .filter((doc: any) => {
+                  const raw = doc?.email
+                  const plain = (typeof raw === 'string' && isEncrypted(raw) ? decryptField(raw) : raw)?.toLowerCase()
+                  return plain === target
+                })
+                .map((doc: any) => doc.id)
+
+              if (matchedIds.length > 0) {
+                ;(args.where as Record<string, any>).id = { in: matchedIds }
+              } else {
+                ;(args.where as Record<string, any>).id = { equals: -1 }
+              }
+              delete (args.where as Record<string, any>).email
+            } catch {
+              // Fallback
+            }
+          }
+        }
+        return args
+      },
+    ],
+    beforeValidate: [
+      ({ data, operation, req }) => {
+        // Defense-in-depth: Non-HR users cannot modify organizational structure, positions, salary, or citizen ID
+        if (operation === 'update' && !isHR(req.user as any) && data) {
+          delete (data as any).salary
+          delete (data as any).cardId
+          delete (data as any).name
+          delete (data as any).department
+          delete (data as any).position
+          delete (data as any).hireDate
+        }
+      },
+    ],
     beforeChange: [
       ({ data }) => {
         if (data) {
@@ -70,6 +121,9 @@ export const Employees: CollectionConfig = {
       type: 'text',
       required: true,
       maxLength: 100,
+      access: {
+        update: hrOnlyFieldUpdateAccess,
+      },
       validate: (val: unknown) => {
         if (typeof val !== 'string' || val.trim().length === 0) return 'Name is required.'
         if (val.length > 100) return 'Name must be at most 100 characters.'
@@ -127,16 +181,25 @@ export const Employees: CollectionConfig = {
       type: 'relationship',
       relationTo: 'departments',
       required: true,
+      access: {
+        update: hrOnlyFieldUpdateAccess,
+      },
     },
     {
       name: 'position',
       type: 'relationship',
       relationTo: 'positions',
       required: true,
+      access: {
+        update: hrOnlyFieldUpdateAccess,
+      },
     },
     {
       name: 'hireDate',
       type: 'date',
+      access: {
+        update: hrOnlyFieldUpdateAccess,
+      },
     },
     {
       name: 'salary',

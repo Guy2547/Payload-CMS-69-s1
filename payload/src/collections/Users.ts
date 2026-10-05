@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import {
   isAdmin,
+  isHR,
   roleFieldAccess,
   userDepartmentFieldAccess,
   usersDeleteAccess,
@@ -65,18 +66,30 @@ export const Users: CollectionConfig = {
     ],
     beforeValidate: [
       ({ data, operation, req }) => {
-        // Enforce strong password policy
-        if (
-          (operation === 'create' || (data as { password?: unknown })?.password) &&
-          typeof (data as { password?: unknown })?.password === 'string'
-        ) {
-          enforcePasswordPolicy((data as { password: string }).password)
+        // Enforce strong password policy on create or when password is provided
+        if (operation === 'create' || (data && 'password' in data && data.password !== undefined)) {
+          enforcePasswordPolicy((data as { password?: unknown })?.password)
         }
 
-        // Defense-in-Depth against Privilege Escalation (CWE-269):
-        // If a non-admin attempts to assign any role other than 'employee', force it to 'employee'
-        if (data && 'role' in data && data.role !== 'employee' && !isAdmin(req.user)) {
-          ;(data as { role: string }).role = 'employee'
+        // Defense-in-Depth against Privilege Escalation (CWE-269 / OWASP A01):
+        if (!isAdmin(req.user as any)) {
+          if (operation === 'create' && data) {
+            // Force public registration role strictly to 'employee'
+            ;(data as any).role = 'employee'
+          } else if (data && 'role' in data) {
+            // Strip role on update so non-admins cannot modify or escalate their role,
+            // and existing non-admin roles (HR/Manager) are never accidentally overwritten.
+            delete (data as any).role
+          }
+        }
+
+        // Non-HR users cannot self-assign or reassign departments
+        if (!isHR(req.user as any)) {
+          if (operation === 'create' && data) {
+            delete (data as any).department
+          } else if (data && 'department' in data) {
+            delete (data as any).department
+          }
         }
       },
     ],

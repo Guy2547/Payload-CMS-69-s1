@@ -35,6 +35,11 @@ export const Media: CollectionConfig = {
       type: 'text',
       required: true,
       maxLength: 200,
+      validate: (val: unknown) => {
+        if (typeof val !== 'string' || val.trim().length === 0) return 'Alt text is required.'
+        if (val.length > 200) return 'Alt text must be at most 200 characters.'
+        return true
+      },
     },
   ],
   upload: {

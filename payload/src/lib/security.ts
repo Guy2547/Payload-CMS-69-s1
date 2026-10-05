@@ -1,3 +1,4 @@
+import net from 'node:net'
 import { APIError, ValidationError } from 'payload'
 import type { PayloadRequest } from 'payload'
 
@@ -8,7 +9,14 @@ import type { PayloadRequest } from 'payload'
 /** Extract best-effort client IP for rate-limit keys (works behind compose). */
 export function getClientIp(req: PayloadRequest): string {
   const headers = req.headers as unknown as Headers
-  return headers?.get?.('x-forwarded-for')?.split(',')[0]?.trim() || headers?.get?.('x-real-ip')?.trim() || 'unknown'
+  const raw =
+    headers?.get?.('x-forwarded-for')?.split(',')[0]?.trim() ||
+    headers?.get?.('x-real-ip')?.trim() ||
+    ''
+  if (raw && net.isIP(raw)) {
+    return raw
+  }
+  return 'unknown'
 }
 
 // --- Minimal sliding-window rate limiter ------------------------------------
@@ -80,6 +88,14 @@ export async function consumeRateLimit(
   }
 
   const now = Date.now()
+
+  // Evict expired buckets when memory size exceeds threshold (A05/DoS protection)
+  if (memoryBuckets.size > 5000) {
+    for (const [k, b] of memoryBuckets.entries()) {
+      if (now >= b.resetAt) memoryBuckets.delete(k)
+    }
+  }
+
   const bucket = memoryBuckets.get(key)
   if (!bucket || now >= bucket.resetAt) {
     memoryBuckets.set(key, { count: 1, resetAt: now + windowMs })

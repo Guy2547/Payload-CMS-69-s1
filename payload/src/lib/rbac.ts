@@ -1,5 +1,7 @@
 import type { Access, FieldAccess } from 'payload'
 
+import { decryptField, isEncrypted } from '@/lib/encryption'
+
 /**
  * Role-Based Access Control (RBAC) Definitions & Helpers
  * OWASP Top 10:2025 - A01: Broken Access Control
@@ -71,8 +73,13 @@ export function hasRole(user: AppUser | null | undefined, ...roles: UserRole[]):
 export function getUserDepartmentId(user?: AppUser | null): number | null {
   if (!user || !user.department) return null
   if (typeof user.department === 'number') return user.department
+  if (typeof user.department === 'string') {
+    const parsed = parseInt(user.department, 10)
+    return Number.isNaN(parsed) ? null : parsed
+  }
   if (typeof user.department === 'object' && 'id' in user.department) {
-    return Number(user.department.id)
+    const parsed = Number(user.department.id)
+    return Number.isNaN(parsed) ? null : parsed
   }
   return null
 }
@@ -189,16 +196,22 @@ export const userDepartmentFieldAccess: FieldAccess = ({ req: { user } }) => {
  * - Read: Admin, HR, or the employee themselves (doc.email === user.email)
  * - Update: Admin or HR only
  */
-export const salaryFieldReadAccess: FieldAccess = ({ req: { user }, doc }) => {
+export const salaryFieldReadAccess: FieldAccess = ({ req, doc }) => {
+  const user = req.user as AppUser | undefined
   if (!user) return false
   if (isHR(user)) return true
   // Self-read: An employee can see their own compensation
-  if (doc && user.email && doc.email === user.email) return true
+  const employeeDoc = doc as (AppUser & { salary?: unknown; cardId?: unknown }) | undefined
+  if (employeeDoc && user.email) {
+    const rawEmail = employeeDoc.email
+    const docEmail = typeof rawEmail === 'string' && isEncrypted(rawEmail) ? decryptField(rawEmail) : rawEmail
+    if (docEmail === user.email) return true
+  }
   return false
 }
 
-export const salaryFieldUpdateAccess: FieldAccess = ({ req: { user } }) => {
-  return isHR(user)
+export const salaryFieldUpdateAccess: FieldAccess = ({ req }) => {
+  return isHR(req.user as AppUser)
 }
 
 /**
@@ -206,13 +219,27 @@ export const salaryFieldUpdateAccess: FieldAccess = ({ req: { user } }) => {
  * - Read: Admin, HR, or the employee themselves
  * - Update: Admin or HR only
  */
-export const cardIdFieldReadAccess: FieldAccess = ({ req: { user }, doc }) => {
+export const cardIdFieldReadAccess: FieldAccess = ({ req, doc }) => {
+  const user = req.user as AppUser | undefined
   if (!user) return false
   if (isHR(user)) return true
-  if (doc && user.email && doc.email === user.email) return true
+  const employeeDoc = doc as (AppUser & { salary?: unknown; cardId?: unknown }) | undefined
+  if (employeeDoc && user.email) {
+    const rawEmail = employeeDoc.email
+    const docEmail = typeof rawEmail === 'string' && isEncrypted(rawEmail) ? decryptField(rawEmail) : rawEmail
+    if (docEmail === user.email) return true
+  }
   return false
 }
 
-export const cardIdFieldUpdateAccess: FieldAccess = ({ req: { user } }) => {
-  return isHR(user)
+export const cardIdFieldUpdateAccess: FieldAccess = ({ req }) => {
+  return isHR(req.user as AppUser)
+}
+
+/**
+ * Structural HR fields update access (name, department, position, hireDate):
+ * Admin and HR only. Regular employees and managers cannot alter job structure.
+ */
+export const hrOnlyFieldUpdateAccess: FieldAccess = ({ req }) => {
+  return isHR(req.user as AppUser)
 }

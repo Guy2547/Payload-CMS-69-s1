@@ -50,11 +50,8 @@ export const Admins: CollectionConfig = {
     // A04: strong passwords on create + password change.
     beforeValidate: [
       ({ data, operation }) => {
-        if (
-          (operation === 'create' || (data as { password?: unknown })?.password) &&
-          typeof (data as { password?: unknown })?.password === 'string'
-        ) {
-          enforcePasswordPolicy((data as { password: string }).password)
+        if (operation === 'create' || (data && 'password' in data && data.password !== undefined)) {
+          enforcePasswordPolicy((data as { password?: unknown })?.password)
         }
       },
     ],
