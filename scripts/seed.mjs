@@ -172,7 +172,7 @@ async function seedPositions(authHeaders) {
 
 async function seedRBACUsers(authHeaders, deptMap) {
   console.log('\n[4/5] Setting up Role-Based Users (RBAC)...')
-  const defaultPassword = process.env.DEMO_PASSWORD || 'SecPass12345!'
+  const defaultPassword = process.env.RBAC_PASSWORD || process.env.DEMO_PASSWORD || 'SecPass12345!'
 
   const secDeptId = deptMap['Information Security'] || Object.values(deptMap)[0]
   const hrDeptId = deptMap['Human Resources'] || Object.values(deptMap)[1]
