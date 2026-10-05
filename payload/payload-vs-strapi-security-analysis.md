@@ -1,6 +1,6 @@
-# Headless CMS Architecture & Security Analysis: Payload CMS vs Strapi
+# Headless CMS Architecture & Security Analysis: Payload CMS vs Strapi (RBAC & Security Focus)
 
-เอกสารวิเคราะห์เปรียบเทียบเชิงสถาปัตยกรรม (Architecture) และมาตรฐานความปลอดภัย (Security & Access Control) ระหว่าง **Payload CMS** และ **Strapi** เพื่อสนับสนุนเหตุผลในการเลือกใช้และเสริมการออกแบบระบบรักษาความปลอดภัยตามมาตรฐาน OWASP Top 10 และ Field-Level Encryption ในโปรเจกต์นี้
+เอกสารวิเคราะห์เปรียบเทียบเชิงสถาปัตยกรรม (Architecture) และมาตรฐานความปลอดภัย โดยเฉพาะหัวข้อ **Role-Based Access Control (RBAC)** ร่วมกับ **OWASP Top 10** และ **Field-Level Data Encryption** ระหว่าง **Payload CMS** และ **Strapi** เพื่อสนับสนุนเหตุผลในการเลือกใช้และสรุปการออกแบบระบบรักษาความปลอดภัยในโปรเจกต์นี้
 
 ---
 
@@ -21,44 +21,54 @@
 | **การเชื่อมต่อกับ Next.js** | **Native Embed / In-App:** ทำงานร่วมกับ Next.js (App Router) ภายใน Repository และ Process เดียวกันได้โดยตรง | **Decoupled Standalone:** แยกตัวเป็นเซิร์ฟเวอร์อิสระ ติดต่อสื่อสารข้ามเครื่องผ่าน HTTP/Network เท่านั้น |
 | **การดึงข้อมูล (Data Fetching)** | **Local API:** เรียกอ่าน/เขียน Database บน Server-side Component ได้โดยตรงโดยไม่มี Network Overhead | ส่งคำขอผ่าน REST API หรือ GraphQL เท่านั้น (มี Network Latency และความเสี่ยงบน Network layer ปกติ) |
 | **ฐานข้อมูล & ORM (Database Layer)** | รองรับ PostgreSQL, SQLite และ MongoDB ผ่าน Database Adapter ด้วย **Drizzle ORM** | รองรับ PostgreSQL, MySQL, MariaDB, SQLite ผ่าน **Knex ORM** |
-| **การจัดการสิทธิ์ (Access Control)** | เขียนฟังก์ชันเงื่อนไขใน TypeScript ได้ยืดหยุ่น ลึกถึงระดับ Field และ Dynamic Request Context | จัดการ Role & Permissions แบบมาตรฐานผ่านหน้า Admin UI |
+| **การจัดการสิทธิ์ (Access Control / RBAC)** | เขียนฟังก์ชันเงื่อนไขใน TypeScript ได้ยืดหยุ่น ลึกถึงระดับ Field, Row-level (`Where` query constraints) และป้องกัน Privilege Escalation ได้ในตัว | จัดการ Role & Permissions แบบมาตรฐานผ่านหน้า Admin UI (ความสามารถ Field-Level และ Custom Conditions ต้องใช้รุ่น Enterprise หรือเขียนโค้ด Controller ครอบ) |
 
 ---
 
-## 3. การวิเคราะห์เชิงลึกด้านความปลอดภัย (Security & Compliance Analysis)
+## 3. การวิเคราะห์เชิงลึกด้านความปลอดภัย & การควบคุมสิทธิ์ (Security & RBAC Analysis)
 
-เมื่อนำสถาปัตยกรรมของทั้งสองระบบมาประเมินร่วมกับนโยบาย **OWASP Top 10** และการทำ **Field-Level Encryption (AES-256-GCM)** ในโปรเจกต์นี้ พบประเด็นสำคัญดังนี้:
+เมื่อนำสถาปัตยกรรมของทั้งสองระบบมาประเมินร่วมกับนโยบาย **OWASP Top 10:2025** โดยเฉพาะ **A01: Broken Access Control** และ **A04: Cryptographic Failures** พบประเด็นสำคัญดังนี้:
 
-### 3.1 Field-Level Access Control & Encryption (A01: Broken Access Control & A02: Cryptographic Failures)
-* **Payload CMS (Code-Centric Advantage):**
-  - ด้วยแนวคิด Code-First ทำให้สามารถฝัง Lifecycle Hooks (`beforeChange`, `afterRead`) ร่วมกับกระบวนการเข้ารหัส **AES-256-GCM** ได้โดยตรงในไฟล์ Collection Config
-  - สามารถตรวจสอบสิทธิ์ในระดับ Field เช่น กำหนดให้ Admin เท่านั้นที่สามารถถอดรหัสและมองเห็นฟิลด์เงินเดือนหรือข้อมูลส่วนบุคคลในโมเดล `departments`/`company` ได้อย่างแม่นยำ
-* **Strapi (GUI-First Limitation):**
-  - แม้จะมีระบบ Role & Permissions บน UI ที่ใช้งานง่าย แต่การแทรกตรรกะการเข้ารหัสระดับ Field แบบ Custom มักมี Boilerplate สูง และต้องจัดการผ่าน Lifecycle Hooks ใน Controller แยกต่างหาก ซึ่งซับซ้อนกว่าและอาจหลุดจากการตรวจสอบผ่าน UI
+### 3.1 การควบคุมสิทธิ์ตามบทบาท (Role-Based Access Control - RBAC)
+* **Payload CMS (Code-First Granular RBAC):**
+  - **Collection & Row-Level Security:** ฟังก์ชัน `access` ใน Payload สามารถคืนค่าเป็นออบเจกต์เงื่อนไข SQL `Where` ได้โดยตรง เช่น ผู้จัดการแผนก (Manager) จะมองเห็นเฉพาะข้อมูลพนักงานในแผนกตนเอง (`{ department: { equals: user.department } }`) โดยระบบ Drizzle ORM จะแทรกเงื่อนไขลงใน SQL Query ให้อัตโนมัติ ป้องกันช่องโหว่ IDOR อย่างสมบูรณ์
+  - **Field-Level Access Control:** รองรับการคุมสิทธิ์รายฟิลด์อย่างอิสระ เช่น ฟิลด์ `salary` และ `cardId` ถูกจำกัดให้เฉพาะ Admin, HR หรือเจ้าของข้อมูล (Self-service ABAC) เท่านั้นที่จะอ่านได้ หากเป็นบทบาทอื่น Payload จะตัดฟิลด์นี้ออกจาก JSON response ทันที
+  - **Privilege Escalation Mitigation (Mass Assignment):** สามารถล็อกฟิลด์ `role` ในคอลเลกชัน `users` ให้เขียนได้เฉพาะ Admin เท่านั้น (`access: { create: isAdmin, update: isAdmin }`) ทำให้แม้ผู้ไม่หวังดีจะยิง API สมัครสมาชิกพร้อมแนบ `role: "admin"` ข้อมูลดังกล่าวจะถูกปฏิเสธและบังคับใช้ค่าเริ่มต้น (`employee`) ทันที
+* **Strapi (GUI-First Limitations):**
+  - ใน Strapi Community Edition ระบบ Role & Permissions รองรับการเปิด/ปิดสิทธิ์เฉพาะในระดับ Endpoint/Action (CRUD) ของ Content-Type เท่านั้น
+  - การทำ Granular RBAC ระดับ Field หรือ Row-Level Filtering (เช่น ให้ดูได้เฉพาะแผนกของตนเอง) เป็นฟีเจอร์ของ **Strapi Enterprise Edition** (มีค่าลิขสิทธิ์) หรือนักพัฒนาต้องเขียน Custom Policy / Route Controller มาดักจับเองทั้งหมด ซึ่งเสี่ยงต่อการเกิดข้อผิดพลาดในการตรวจสอบสิทธิ์ (Broken Access Control)
 
-### 3.2 Network Attack Surface & Local API (A05: Security Misconfiguration)
-* **Payload CMS:**
-  - การใช้งาน **Local API** ร่วมกับ Next.js ทำให้การสื่อสารระหว่าง Frontend SSR และ Backend เกิดขึ้นภายใน Server Process เดียวกัน
-  - ช่วยตัดความเสี่ยงด้าน Network Eavesdropping หรือการถูกดักฟัง Packet ข้อมูลอ่อนไหวที่วิ่งผ่านเครือข่ายภายใน (Zero Network Overhead)
+### 3.2 การประสานระหว่าง RBAC และ Field-Level Encryption (AES-256-GCM)
+* **Payload CMS (Unified Lifecycle Hooks):**
+  - ในสถาปัตยกรรมนี้ ข้อมูลอ่อนไหว (PII) เช่น บัตรประชาชน และเงินเดือน จะถูกเข้ารหัสแบบ **AES-256-GCM** ที่ระดับฐานข้อมูล (Data-at-Rest) เสมอผ่าน hook `beforeChange`
+  - เมื่อมีการดึงข้อมูล hook `afterRead` จะทำการถอดรหัสในหน่วยความจำ และผ่านการประเมินสิทธิ์ระดับฟิลด์ของ RBAC อีกชั้นหนึ่ง ทำให้ระบบมีความปลอดภัยแบบ Defense-in-Depth สองชั้นอย่างแท้จริง
 * **Strapi:**
-  - สถาปัตยกรรมแบบ Decoupled บังคับให้ต้องส่งข้อมูลผ่าน HTTP/REST API ตลอดเวลา ทำให้จำเป็นต้องตั้งค่า Network Hardening, CORS, TLS และ API Token อย่างรัดกุมในทุก Endpoint เพื่อป้องกันการโจมตี
+  - การเชื่อมโยงระหว่างการเข้ารหัสระดับฟิลด์และระบบ Permissions ของ Strapi มักเกิดความไม่สอดคล้องกัน เนื่องจาก Sanitizer ของ Strapi ทำงานแยกส่วนกับ Lifecycle Hooks ทำให้ข้อมูลอาจหลุดหรือถูก serialize ออกไปก่อนการตรวจสอบสิทธิ์
 
-### 3.3 CI/CD & Schema Integrity (A08: Software and Data Integrity Failures)
+### 3.3 CI/CD, Automated Testing & Schema Integrity
 * **Payload CMS:**
-  - Schema และ Access Policy ทั้งหมดถูกจัดเก็บในรูปแบบโค้ด TypeScript 100% ทำให้สามารถใช้ Git ควบคุมเวอร์ชัน และรันการทดสอบ Type Safety, Linter รวมถึงเครื่องมือ Security Scanner (เช่น Trivy) บน CI/CD Pipeline ได้อย่างสมบูรณ์ ป้องกันปัญหา Schema เพี้ยนหรือการตั้งค่าสิทธิ์หลุดใน Production
+  - นโยบาย Access Control และโครงสร้าง Role ทั้งหมดถูกเขียนเป็น TypeScript Code 100% ทำให้สามารถเขียน Automated Test (เช่น Vitest / Playwright) ทดสอบสิทธิ์ของแต่ละ Role ได้ในระดับ Unit/Integration Test บน CI/CD Pipeline ทุกครั้งที่มีการ commit โค้ด
 * **Strapi:**
-  - การปรับแก้ Schema หรือการกำหนดสิทธิ์ผ่าน GUI มีความท้าทายสูงในกระบวนการ Sync ข้ามสภาพแวดล้อม (Dev -> Staging -> Production) เสี่ยงต่อปัญหา Data/Schema Inconsistency ในระหว่าง Deploy
+  - สิทธิ์ของ Role ถูกบันทึกลงใน Database ตาราง `up_permissions` ทำให้ยากต่อการทำ Code Review, การติดตาม Git Diff หรือการทดสอบ Automated Test ใน CI/CD
 
 ---
 
-## 4. ข้อสรุปและเกณฑ์การเลือกใช้งาน (Decision Framework)
+## 4. ตารางเปรียบเทียบฟังก์ชัน RBAC & มาตรการความปลอดภัย
 
-| เกณฑ์การพิจารณา | เลือก Payload CMS | เลือก Strapi |
+| เกณฑ์การประเมินสิทธิ์ (RBAC Capability) | Payload CMS v3 (Code-First) | Strapi v4 Community (GUI) |
 | :--- | :---: | :---: |
-| ระบบต้องการความปลอดภัยระดับสูงและทำ Custom Field Encryption |  | ❌ |
-| โปรเจกต์ใช้ Next.js และต้องการลดต้นทุนการดูแลแยกเซิร์ฟเวอร์ |  | ❌ |
-| ต้องการ Type Safety สมบูรณ์ทั้งระบบตั้งแต่ Database ถึง Frontend |  | ❌ |
-| ทีมงานส่วนใหญ่เป็น Content Ops / PM ที่ต้องการสร้างโมเดลข้อมูลเองผ่านเว็บ | ❌ |  |
-| ต้องการ API Hub สำเร็จรูปที่มี Marketplace และ Plugin พร้อมใช้จำนวนมาก | ❌ |  |
+| **Role-Based Access Control พื้นฐาน (Admin, User, etc.)** | ✅ (สร้างกี่ Role ก็ได้ในโค้ด) | ✅ (สร้างผ่าน Admin UI) |
+| **Field-Level Access Control ฟรีในตัว (ไม่ต้องซื้อ Enterprise)** | ✅ (ฟรีใน Core Open-source) | ❌ (จำกัดเฉพาะ Enterprise) |
+| **Row-Level Security / Dynamic Query Scoping (`Where`)** | ✅ (Native คืนค่า Where object) | ❌ (ต้องเขียน Controller เอง) |
+| **การป้องกัน Privilege Escalation บนฟิลด์ Role** | ✅ (Field Access บล็อกอัตโนมัติ) | ⚠️ (ต้องเขียน Policy ดัก) |
+| **การทดสอบสิทธิ์อัตโนมัติ (Automated RBAC Testing)** | ✅ (รองรับ Vitest / Jest สมบูรณ์) | ❌ (ทดสอบได้ยากเนื่องจากอยู่ใน DB) |
+| **การผสานงานกับ Field-Level Encryption (AES-256-GCM)** | ✅ (Seamless ผ่าน Lifecycle Hooks) | ⚠️ (ซับซ้อนและมี Boilerplate สูง) |
 
-**สรุปภาพรวม:** สำหรับโปรเจกต์นี้ที่มุ่งเน้นการเสริมความแข็งแกร่งด้านความปลอดภัย (Security Hardening), การจัดการสิทธิ์แบบ Admin Lockdown และการเข้ารหัสข้อมูลสำคัญระดับฟิลด์ **Payload CMS** เป็นตัวเลือกที่ตอบโจทย์สถาปัตยกรรมมากกว่าทั้งในแง่ความยืดหยุ่นของโค้ด ประสิทธิภาพ และการควบคุมความเสี่ยงอย่างเป็นระบบ
+---
+
+## 5. ข้อสรุปและเกณฑ์การเลือกใช้งาน (Decision Framework)
+
+**สรุปภาพรวม:** ในการพัฒนาระบบที่มีข้อมูลความลับระดับสูง (HR, เงินเดือน, PII) และต้องปฏิบัติตามมาตรฐาน **OWASP Top 10 (A01: Broken Access Control)** การเลือกใช้ **Payload CMS** มอบข้อได้เปรียบอย่างเด็ดขาดด้วยระบบ **Code-First RBAC**:
+1. สามารถควบคุมสิทธิ์ได้ละเอียดถึงระดับฟิลด์ (Field-Level) และระดับแถว (Row-Level) โดยไม่มีค่าใช้จ่ายลิขสิทธิ์เพิ่มเติม
+2. ป้องกันปัญหา Privilege Escalation ได้อย่างเบ็ดเสร็จทั้งในระดับ Access Check และ Lifecycle Hook
+3. โค้ดสิทธิ์ทั้งหมดอยู่บน Version Control (Git) ตรวจสอบและทดสอบแบบ Automated ได้ 100%

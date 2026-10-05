@@ -1,6 +1,8 @@
 import type { CollectionConfig } from 'payload'
 
-// Company domain: departments (e.g. HR, IT, Sales).
+import { isAdmin } from '@/lib/rbac'
+
+// Company domain: departments (e.g. HR, IT, Software Engineering).
 // OWASP A01 Strict: any authenticated user may read, but only admins
 // may create/update/delete. A05: strict field validation (length + format).
 export const Departments: CollectionConfig = {
@@ -10,10 +12,10 @@ export const Departments: CollectionConfig = {
     defaultColumns: ['name', 'description'],
   },
   access: {
-    create: ({ req }) => req.user?.collection === 'admins',
+    create: ({ req }) => isAdmin(req.user),
     read: ({ req }) => Boolean(req.user),
-    update: ({ req }) => req.user?.collection === 'admins',
-    delete: ({ req }) => req.user?.collection === 'admins',
+    update: ({ req }) => isAdmin(req.user),
+    delete: ({ req }) => isAdmin(req.user),
   },
   fields: [
     {

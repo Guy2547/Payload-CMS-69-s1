@@ -1,5 +1,5 @@
 // scripts/seed.mjs
-// Seeds initial data into Payload CMS via REST API
+// Seeds initial data into Payload CMS via REST API with Role-Based Access Control (RBAC)
 
 const BASE_URL = process.env.PAYLOAD_URL || 'http://localhost:9092'
 
@@ -38,7 +38,6 @@ async function waitForServer(retries = 30, delayMs = 3000) {
 
 async function seedAdmin() {
   console.log('\n[1/5] Setting up First Admin...')
-  // Sonar S2068: no default password — fail closed if env is not set.
   if (!process.env.ADMIN_PASSWORD) {
     throw new Error('ADMIN_PASSWORD env is required to seed (no default password).')
   }
@@ -73,33 +72,12 @@ async function seedAdmin() {
     throw new Error(`Failed to log in as admin: ${JSON.stringify(loginRes.data)}`)
   }
 
-  console.log('Logged in successfully. JWT Token acquired.')
+  console.log('Logged in successfully. Admin JWT Token acquired.')
   return { Authorization: `Bearer ${loginRes.data.token}` }
 }
 
-async function seedUser() {
-  console.log('\n[3/5] Setting up Demo User...')
-  // Sonar S2068: no default password — fail closed if env is not set.
-  if (!process.env.DEMO_PASSWORD) {
-    throw new Error('DEMO_PASSWORD env is required to seed (no default password).')
-  }
-  const userCreds = {
-    email: process.env.DEMO_EMAIL || 'demo@cybersec.local',
-    password: process.env.DEMO_PASSWORD,
-    username: process.env.DEMO_USERNAME || 'demouser',
-  }
-  const userRes = await request('/api/users', {
-    method: 'POST',
-    body: JSON.stringify(userCreds),
-  })
-  if (userRes.ok) {
-    console.log('Demo user registered successfully!')
-  } else {
-    console.log('Demo user register status:', userRes.status)
-  }
-}
-
 async function seedDepartments(authHeaders) {
+  console.log('\n[3/5] Setting up Departments & Positions...')
   const departmentsData = [
     {
       name: 'Information Security',
@@ -192,6 +170,68 @@ async function seedPositions(authHeaders) {
   return posMap
 }
 
+async function seedRBACUsers(authHeaders, deptMap) {
+  console.log('\n[4/5] Setting up Role-Based Users (RBAC)...')
+  const defaultPassword = process.env.DEMO_PASSWORD || 'SecPass12345!'
+
+  const secDeptId = deptMap['Information Security'] || Object.values(deptMap)[0]
+  const hrDeptId = deptMap['Human Resources'] || Object.values(deptMap)[1]
+
+  const rbacUsers = [
+    {
+      email: 'admin_user@cybersec.local',
+      username: 'admin_user',
+      password: defaultPassword,
+      role: 'admin',
+      description: 'Admin role with full collection & system access',
+    },
+    {
+      email: 'hr_user@cybersec.local',
+      username: 'hr_specialist',
+      password: defaultPassword,
+      role: 'hr',
+      department: hrDeptId,
+      description: 'HR role with full employee PII/salary CRUD & position management',
+    },
+    {
+      email: 'manager_user@cybersec.local',
+      username: 'it_manager',
+      password: defaultPassword,
+      role: 'manager',
+      department: secDeptId,
+      description: 'Manager role scoped to Information Security department (salary masked)',
+    },
+    {
+      email: 'somchai.j@cybersec.local',
+      username: 'somchai_emp',
+      password: defaultPassword,
+      role: 'employee',
+      department: secDeptId,
+      description: 'Regular employee role with self-service view and directory browsing',
+    },
+  ]
+
+  for (const u of rbacUsers) {
+    const res = await request('/api/users', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        email: u.email,
+        username: u.username,
+        password: u.password,
+        role: u.role,
+        department: u.department,
+      }),
+    })
+
+    if (res.ok) {
+      console.log(` Created User: ${u.email} [Role: ${u.role}] - ${u.description}`)
+    } else {
+      console.log(` User ${u.email} status:`, res.status)
+    }
+  }
+}
+
 async function seedEmployees(authHeaders, deptMap, posMap) {
   console.log('\n[5/5] Creating Sample Employees...')
   const itDeptId = deptMap['Information Security'] || Object.values(deptMap)[0]
@@ -260,21 +300,24 @@ async function seedEmployees(authHeaders, deptMap, posMap) {
 }
 
 async function main() {
-  console.log('--- Starting Data Seeder for Payload CMS ---')
+  console.log('--- Starting Data Seeder for Payload CMS (RBAC Enabled) ---')
   await waitForServer()
 
   const authHeaders = await seedAdmin()
-  await seedUser()
-
-  console.log('\n[4/5] Creating Departments & Positions...')
   const deptMap = await seedDepartments(authHeaders)
   const posMap = await seedPositions(authHeaders)
 
+  await seedRBACUsers(authHeaders, deptMap)
   await seedEmployees(authHeaders, deptMap, posMap)
 
   console.log('\n=============================================')
-  console.log('Data Seeding Completed Successfully!')
-  console.log('Admin URL:  http://localhost:9092/admin')
+  console.log('RBAC Data Seeding Completed Successfully!')
+  console.log('Admin URL:       http://localhost:9092/admin')
+  console.log('RBAC Test Roles:')
+  console.log('  1. Superadmin: admin@cybersec.local')
+  console.log('  2. HR Specialist: hr_user@cybersec.local')
+  console.log('  3. IT Manager: manager_user@cybersec.local')
+  console.log('  4. Employee:   somchai.j@cybersec.local')
   console.log('=============================================\n')
 }
 

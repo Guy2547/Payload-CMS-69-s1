@@ -1,14 +1,23 @@
 import type { CollectionConfig } from 'payload'
 
 import { decryptField, encryptField, isEncrypted } from '@/lib/encryption'
+import {
+  cardIdFieldReadAccess,
+  cardIdFieldUpdateAccess,
+  employeesCreateAccess,
+  employeesDeleteAccess,
+  employeesReadAccess,
+  employeesUpdateAccess,
+  hrOnlyFieldUpdateAccess,
+  isHR,
+  salaryFieldReadAccess,
+  salaryFieldUpdateAccess,
+} from '@/lib/rbac'
 
 // Company domain: employees.
-// OWASP A01 Strict: authenticated read, admin-only write.
+// OWASP A01 Strict: Role-Based Access Control (RBAC) + Row-level & Field-level security.
 // OWASP A04 Strict: Field-Level Data Encryption (AES-256-GCM) for sensitive PII (cardId, salary, email).
 // A05: strict field validation (length, regex & format).
-// Linear-time email shape check (single '@', dot in domain, no whitespace).
-// Equivalent strictness to the previous /^[^@\s]+@[^@\s]+\.[^@\s]+$/ pattern
-// without the super-linear backtracking (Sonar S8786).
 function isValidEmail(val: string): boolean {
   if (/\s/.test(val)) return false
   const at = val.indexOf('@')
@@ -26,12 +35,66 @@ export const Employees: CollectionConfig = {
     defaultColumns: ['name', 'department', 'position', 'mobile', 'email'],
   },
   access: {
-    create: ({ req }) => req.user?.collection === 'admins',
-    read: ({ req }) => Boolean(req.user),
-    update: ({ req }) => req.user?.collection === 'admins',
-    delete: ({ req }) => req.user?.collection === 'admins',
+    // Admin or HR can create employees
+    create: employeesCreateAccess,
+    // Admin & HR see all; Managers see own department; Employees see company directory
+    read: employeesReadAccess,
+    // Admin/HR can update all; Managers update own dept; Employees update self contact info
+    update: employeesUpdateAccess,
+    // Strict compliance: Only Superadmin can delete employee records
+    delete: employeesDeleteAccess,
   },
   hooks: {
+    beforeOperation: [
+      async ({ args, operation, req }) => {
+        // Transparent query resolution for encrypted 'email' field
+        const queryArgs = args as { where?: Record<string, any> } | undefined
+        if ((operation === 'read' || operation === 'update') && queryArgs?.where) {
+          const whereEmail = queryArgs.where?.email?.equals
+          if (typeof whereEmail === 'string') {
+            try {
+              const all = await req.payload.find({
+                collection: 'employees',
+                depth: 0,
+                pagination: false,
+                overrideAccess: true,
+              })
+              const target = whereEmail.toLowerCase()
+              const matchedIds = (all.docs as any[])
+                .filter((doc: any) => {
+                  const raw = doc?.email
+                  const plain = (typeof raw === 'string' && isEncrypted(raw) ? decryptField(raw) : raw)?.toLowerCase()
+                  return plain === target
+                })
+                .map((doc: any) => doc.id)
+
+              if (matchedIds.length > 0) {
+                queryArgs.where.id = { in: matchedIds }
+              } else {
+                queryArgs.where.id = { equals: -1 }
+              }
+              delete queryArgs.where.email
+            } catch {
+              // Fallback
+            }
+          }
+        }
+        return args
+      },
+    ],
+    beforeValidate: [
+      ({ data, operation, req }) => {
+        // Defense-in-depth: Non-HR users cannot modify organizational structure, positions, salary, or citizen ID
+        if (operation === 'update' && !isHR(req.user as any) && data) {
+          delete (data as any).salary
+          delete (data as any).cardId
+          delete (data as any).name
+          delete (data as any).department
+          delete (data as any).position
+          delete (data as any).hireDate
+        }
+      },
+    ],
     beforeChange: [
       ({ data }) => {
         if (data) {
@@ -59,6 +122,9 @@ export const Employees: CollectionConfig = {
       type: 'text',
       required: true,
       maxLength: 100,
+      access: {
+        update: hrOnlyFieldUpdateAccess,
+      },
       validate: (val: unknown) => {
         if (typeof val !== 'string' || val.trim().length === 0) return 'Name is required.'
         if (val.length > 100) return 'Name must be at most 100 characters.'
@@ -74,7 +140,6 @@ export const Employees: CollectionConfig = {
       validate: (val: unknown) => {
         if (val == null || val === '') return true
         if (typeof val === 'string' && isEncrypted(val)) return true
-        // Sonar S8786: linear-time check instead of backtracking regex.
         if (typeof val !== 'string' || !isValidEmail(val)) {
           return 'Please provide a valid email address.'
         }
@@ -97,11 +162,14 @@ export const Employees: CollectionConfig = {
       name: 'cardId',
       type: 'text',
       admin: {
-        description: '13-digit National ID (Encrypted at rest with AES-256-GCM).',
+        description: '13-digit National ID (Encrypted at rest with AES-256-GCM, RBAC restricted).',
+      },
+      access: {
+        read: cardIdFieldReadAccess,
+        update: cardIdFieldUpdateAccess,
       },
       validate: (val: unknown) => {
         if (val == null || val === '') return true
-        // Allow already encrypted strings if passed during internal operations
         if (typeof val === 'string' && isEncrypted(val)) return true
         if (typeof val !== 'string' || !/^[0-9]{13}$/.test(val)) {
           return 'CardId must be exactly 13 digits.'
@@ -114,22 +182,35 @@ export const Employees: CollectionConfig = {
       type: 'relationship',
       relationTo: 'departments',
       required: true,
+      access: {
+        update: hrOnlyFieldUpdateAccess,
+      },
     },
     {
       name: 'position',
       type: 'relationship',
       relationTo: 'positions',
       required: true,
+      access: {
+        update: hrOnlyFieldUpdateAccess,
+      },
     },
     {
       name: 'hireDate',
       type: 'date',
+      access: {
+        update: hrOnlyFieldUpdateAccess,
+      },
     },
     {
       name: 'salary',
       type: 'text',
       admin: {
-        description: 'Compensation in THB (Encrypted at rest with AES-256-GCM).',
+        description: 'Compensation in THB (Encrypted at rest with AES-256-GCM, RBAC restricted).',
+      },
+      access: {
+        read: salaryFieldReadAccess,
+        update: salaryFieldUpdateAccess,
       },
       validate: (val: unknown) => {
         if (val == null || val === '') return true

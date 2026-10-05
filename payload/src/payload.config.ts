@@ -89,13 +89,12 @@ export default buildConfig({
       port: Number(process.env.EMAIL_SMTP_PORT) || 587,
       secure: Number(process.env.EMAIL_SMTP_PORT) === 465,
       requireTLS: true,
-      auth:
-        smtpConfigured || process.env.NODE_ENV !== 'production'
-          ? {
-              user: process.env.EMAIL_SMTP_USER || '',
-              pass: process.env.EMAIL_SMTP_PASS || '',
-            }
-          : undefined,
+      auth: smtpConfigured
+        ? {
+            user: process.env.EMAIL_SMTP_USER || '',
+            pass: process.env.EMAIL_SMTP_PASS || '',
+          }
+        : undefined,
     },
   }),
   sharp,

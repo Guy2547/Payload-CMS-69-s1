@@ -179,6 +179,8 @@ export interface Admin {
 export interface User {
   id: number;
   username: string;
+  role: 'admin' | 'hr' | 'manager' | 'employee';
+  department?: (number | null) | Department;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -229,12 +231,13 @@ export interface Position {
 export interface Employee {
   id: number;
   name: string;
+  email?: string | null;
   mobile?: string | null;
   cardId?: string | null;
   department: number | Department;
   position: number | Position;
   hireDate?: string | null;
-  salary?: number | null;
+  salary?: (string | null) | number;
   updatedAt: string;
   createdAt: string;
 }
@@ -443,6 +446,7 @@ export interface PositionsSelect<T extends boolean = true> {
  */
 export interface EmployeesSelect<T extends boolean = true> {
   name?: T;
+  email?: T;
   mobile?: T;
   cardId?: T;
   department?: T;
