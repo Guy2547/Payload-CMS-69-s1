@@ -23,7 +23,8 @@ export const Positions: CollectionConfig = {
       required: true,
       unique: true,
       maxLength: 100,
-      validate: (val: unknown) => {
+      validate: (val: unknown, { operation }: { operation?: string } = {}) => {
+        if ((val == null || val === '') && operation !== 'create') return true
         if (typeof val !== 'string' || val.trim().length === 0) return 'Name is required.'
         if (val.length > 100) return 'Name must be at most 100 characters.'
         return true

@@ -5,6 +5,7 @@ import { decryptField, encryptField, isEncrypted } from '@/lib/encryption'
 import {
   cardIdFieldReadAccess,
   cardIdFieldUpdateAccess,
+  emailFieldReadAccess,
   employeesCreateAccess,
   employeesDeleteAccess,
   employeesReadAccess,
@@ -114,10 +115,19 @@ export const Employees: CollectionConfig = {
                 })
                 .map((doc: any) => doc.id)
 
-              if (matchedIds.length > 0) {
-                queryArgs.where.id = { in: matchedIds }
+              const idClause = matchedIds.length > 0 ? { in: matchedIds } : { equals: -1 }
+              const prevId = (queryArgs.where as Record<string, any>).id
+              if (prevId !== undefined) {
+                // Preserve a pre-existing id constraint (AND instead of overwrite).
+                const prevAnd = (queryArgs.where as Record<string, any>).and
+                ;(queryArgs.where as Record<string, any>).and = [
+                  ...(Array.isArray(prevAnd) ? prevAnd : []),
+                  { id: prevId },
+                  { id: idClause },
+                ]
+                delete (queryArgs.where as Record<string, any>).id
               } else {
-                queryArgs.where.id = { equals: -1 }
+                ;(queryArgs.where as Record<string, any>).id = idClause
               }
               delete queryArgs.where.email
             } catch {
@@ -185,6 +195,9 @@ export const Employees: CollectionConfig = {
       type: 'text',
       admin: {
         description: 'Employee contact email (Encrypted at rest with AES-256-GCM).',
+      },
+      access: {
+        read: emailFieldReadAccess,
       },
       validate: (val: unknown) => {
         if (val == null || val === '') return true

@@ -51,23 +51,6 @@ export function isManager(user?: AppUser | null): boolean {
 }
 
 /**
- * Employee Role Check:
- * Any authenticated user is at least an employee.
- */
-export function isEmployee(user?: AppUser | null): boolean {
-  return Boolean(user)
-}
-
-/**
- * Check if the user has any of the specified roles.
- */
-export function hasRole(user: AppUser | null | undefined, ...roles: UserRole[]): boolean {
-  if (!user) return false
-  if (isAdmin(user)) return true
-  return Boolean(user.role && roles.includes(user.role))
-}
-
-/**
  * Extract department ID from user relation.
  */
 export function getUserDepartmentId(user?: AppUser | null): number | null {
@@ -192,7 +175,7 @@ export const salaryFieldReadAccess: FieldAccess = ({ req, doc }) => {
   if (employeeDoc && user.email) {
     const rawEmail = employeeDoc.email
     const docEmail = typeof rawEmail === 'string' && isEncrypted(rawEmail) ? decryptField(rawEmail) : rawEmail
-    if (docEmail === user.email) return true
+    if (typeof docEmail === 'string' && docEmail.toLowerCase() === user.email.toLowerCase()) return true
   }
   return false
 }
@@ -214,13 +197,31 @@ export const cardIdFieldReadAccess: FieldAccess = ({ req, doc }) => {
   if (employeeDoc && user.email) {
     const rawEmail = employeeDoc.email
     const docEmail = typeof rawEmail === 'string' && isEncrypted(rawEmail) ? decryptField(rawEmail) : rawEmail
-    if (docEmail === user.email) return true
+    if (typeof docEmail === 'string' && docEmail.toLowerCase() === user.email.toLowerCase()) return true
   }
   return false
 }
 
 export const cardIdFieldUpdateAccess: FieldAccess = ({ req }) => {
   return isHR(req.user as AppUser)
+}
+
+/**
+ * Contact email: same rule as salary/cardId — Admin, HR, or the employee
+ * themselves. Prevents any authenticated user from harvesting all addresses
+ * from the company directory (previously decrypted for every reader).
+ */
+export const emailFieldReadAccess: FieldAccess = ({ req, doc }) => {
+  const user = req.user as AppUser | undefined
+  if (!user) return false
+  if (isHR(user)) return true
+  const employeeDoc = doc as (AppUser & { email?: unknown }) | undefined
+  if (employeeDoc && user.email) {
+    const rawEmail = employeeDoc.email
+    const docEmail = typeof rawEmail === 'string' && isEncrypted(rawEmail) ? decryptField(rawEmail) : rawEmail
+    if (typeof docEmail === 'string' && docEmail.toLowerCase() === user.email.toLowerCase()) return true
+  }
+  return false
 }
 
 /**

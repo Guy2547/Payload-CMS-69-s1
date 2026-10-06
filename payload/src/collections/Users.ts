@@ -17,10 +17,10 @@ import {
   registerRateLimit,
 } from '@/lib/security'
 
-// SMTP is configured only when EMAIL_SMTP_USER is set (see payload.config.ts).
+// SMTP is configured only when BOTH user and pass are set (see payload.config.ts).
 // A06: require email verification when we can actually send mail;
 // otherwise leave it off so the homework register→login flow still works.
-const emailVerificationEnabled = Boolean(process.env.EMAIL_SMTP_USER)
+const emailVerificationEnabled = Boolean(process.env.EMAIL_SMTP_USER && process.env.EMAIL_SMTP_PASS)
 
 // Users collection with Role-Based Access Control (RBAC):
 // Roles: 'admin', 'hr', 'manager', 'employee'
@@ -123,7 +123,8 @@ export const Users: CollectionConfig = {
       type: 'text',
       required: true,
       maxLength: 32,
-      validate: (val: unknown) => {
+      validate: (val: unknown, { operation }: { operation?: string } = {}) => {
+        if ((val == null || val === '') && operation !== 'create') return true
         if (typeof val !== 'string' || val.trim().length < 3) {
           return 'Username must be at least 3 characters.'
         }

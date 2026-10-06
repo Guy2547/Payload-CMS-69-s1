@@ -12,9 +12,9 @@
 | `payload/src/lib/security.ts` (ใหม่) | rate limiter (Redis หลัก/memory fallback), password policy, audit log, client-IP |
 | `payload/src/collections/Admins.ts` | auth: lockout 5 ครั้ง/10 นาที, token 2 ชม., cookies Lax/Secure, hooks rate-limit+policy+audit |
 | `payload/src/collections/Users.ts` | เหมือน Admins + `read` เหลือ self-or-admin, `username` มี validate, `verify` เปิดเมื่อมี SMTP |
-| `payload/src/collections/Students.ts` | read=auth / write=admin; `name ≤100`, `mobile` 9–10 หลัก, `cardId` 13 หลัก |
-| `payload/src/collections/Subjects.ts`, `Teachers.ts` | read=auth / write=admin; `name ≤100` |
-| `payload/src/collections/Media.ts` | read=auth / upload=admin; `mimeTypes` jpeg/png/webp; ไฟล์ ≤5MB (hook); `pasteURL:false`; thumbnail |
+| `payload/src/collections/Employees.ts` | read=auth / write=admin (+HR create/update); `name ≤100`, `mobile` 9–10 หลัก, `cardId` 13 หลัก (PII เข้ารหัส), self/manager scope |
+| `payload/src/collections/Departments.ts`, `Positions.ts` | read=auth / write=admin (Positions: +HR); `name ≤100` unique |
+| `payload/src/collections/Media.ts` | read=auth / upload=Admin/HR/Manager / delete=admin; `mimeTypes` jpeg/png/webp; ไฟล์ ≤5MB (hook); `pasteURL:false`; thumbnail |
 | `payload/src/payload.config.ts` | fail-closed (`PAYLOAD_SECRET≥32`, ต้องมี `DATABASE_URL`), CORS/CSRF allowlist (`CORS_ORIGINS`), `maxDepth:10`, GraphQL playground+introspection ปิดใน prod, SMTP บังคับ STARTTLS, `skipVerify` เหลือแค่ dev |
 | `payload/next.config.ts` | เอา `output:standalone` ออก (ขัดกับ full-copy runner), `poweredByHeader:false`, headers: CSP/HSTS/`X-Frame-Options:DENY`/nosniff/Referrer/Permissions-Policy |
 | `docker-compose.yaml` | เพิ่ม service `redis` (7-alpine, 64MB LRU), ทุก port bind `127.0.0.1`, ส่ง `REDIS_URL`+`CORS_ORIGINS` ให้ app |
@@ -40,8 +40,8 @@
 
 | เคส | ผล |
 |---|---|
-| user `POST /api/students` | **403** ✓ |
-| admin `POST /api/students` | **201** ✓ |
+| user `POST /api/employees` | **403** ✓ |
+| admin `POST /api/employees` | **201** ✓ |
 | `mobile:"abc"` (admin) | **400** `Mobile must be 9-10 digits` ✓ |
 | สมัครรหัส `short1!` | **400** `at least 12 characters` ✓ |
 | user `GET /api/users` เห็นแค่ตัวเอง (1) / admin เห็นทั้งหมด (2) | ✓ |

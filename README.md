@@ -110,7 +110,7 @@ node scripts/seed.mjs
 ## 5. การทดสอบและตรวจสอบความปลอดภัย (Testing & Verification)
 
 ### 5.1 ทดสอบผ่าน REST Client (`api.http` / `api.http.simple`)
-เปิดไฟล์ [api.http](file:///C:/Users/theer/Downloads/Payload-CMS-69-s1-feat-rest/Payload-CMS-69-s1-feat-rest/api.http) ใน VS Code เพื่อรันคำขอทดสอบตามลำดับ:
+เปิดไฟล์ `api.http` ใน VS Code เพื่อรันคำขอทดสอบตามลำดับ:
 1. **Privilege Escalation Test:** ทดลองสมัครสมาชิกพร้อมส่ง `"role": "admin"` เพื่อดูระบบป้องกันและบังคับลดสิทธิ์เป็น `"employee"`
 2. **HR Operations:** ทดสอบ HR สร้างพนักงาน ปรับเงินเดือน และทดลองลบ (จะถูก 403 Forbidden)
 3. **Manager Operations:** ทดสอบ Manager เข้าดูพนักงาน (ฟิลด์ `salary` และ `cardId` จะถูกตัดทิ้งอัตโนมัติ)
@@ -133,10 +133,10 @@ npm run test:int
 
 ## 6. เอกสารอ้างอิงทางเทคนิค (Documentation)
 
-- [docs/SECURITY_RBAC.md](file:///C:/Users/theer/Downloads/Payload-CMS-69-s1-feat-rest/Payload-CMS-69-s1-feat-rest/docs/SECURITY_RBAC.md) — เอกสารสถาปัตยกรรมและรายละเอียดทางเทคนิคของระบบ RBAC ฉบับสมบูรณ์
-- [payload/payload-vs-strapi-security-analysis.md](file:///C:/Users/theer/Downloads/Payload-CMS-69-s1-feat-rest/Payload-CMS-69-s1-feat-rest/payload/payload-vs-strapi-security-analysis.md) — เอกสารวิเคราะห์เปรียบเทียบเชิงสถาปัตยกรรมและการจัดการสิทธิ์ (Payload CMS vs Strapi)
-- [docs/SECURITY_ENCRYPTION.md](file:///C:/Users/theer/Downloads/Payload-CMS-69-s1-feat-rest/Payload-CMS-69-s1-feat-rest/docs/SECURITY_ENCRYPTION.md) — เอกสารการเข้ารหัสข้อมูลระดับฟิลด์ (AES-256-GCM / PDPA)
-- [docs/SECURITY-OWASP-2025.md](file:///C:/Users/theer/Downloads/Payload-CMS-69-s1-feat-rest/Payload-CMS-69-s1-feat-rest/docs/SECURITY-OWASP-2025.md) — รายงานการประเมินและป้องกันช่องโหว่ OWASP Top 10:2025
+- [docs/SECURITY_RBAC.md](./docs/SECURITY_RBAC.md) — เอกสารสถาปัตยกรรมและรายละเอียดทางเทคนิคของระบบ RBAC ฉบับสมบูรณ์
+- [payload/payload-vs-strapi-security-analysis.md](./payload/payload-vs-strapi-security-analysis.md) — เอกสารวิเคราะห์เปรียบเทียบเชิงสถาปัตยกรรมและการจัดการสิทธิ์ (Payload CMS vs Strapi)
+- [docs/SECURITY_ENCRYPTION.md](./docs/SECURITY_ENCRYPTION.md) — เอกสารการเข้ารหัสข้อมูลระดับฟิลด์ (AES-256-GCM / PDPA)
+- [docs/SECURITY-OWASP-2025.md](./docs/SECURITY-OWASP-2025.md) — รายงานการประเมินและป้องกันช่องโหว่ OWASP Top 10:2025
 
 ---
 
