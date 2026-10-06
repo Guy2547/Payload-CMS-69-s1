@@ -147,23 +147,10 @@ export const employeesReadAccess: Access = ({ req: { user } }) => {
 }
 
 export const employeesUpdateAccess: Access = ({ req: { user } }) => {
-  if (!user) return false
-  if (isHR(user)) return true
-
-  // Manager can update employees within their own department
-  if (isManager(user)) {
-    const deptId = getUserDepartmentId(user)
-    if (deptId) {
-      return { department: { equals: deptId } } as Where
-    }
-  }
-
-  // Regular employee can update their own contact details
-  if (user.email) {
-    return { email: { equals: user.email } } as Where
-  }
-
-  return false
+  // Any authenticated user passes collection-level access; ownership is
+  // enforced per-document by the Employees beforeOperation hook (email is
+  // encrypted at rest, so a static email-based Where can never match).
+  return Boolean(user)
 }
 
 export const employeesDeleteAccess: Access = ({ req: { user } }) => {
@@ -238,8 +225,11 @@ export const cardIdFieldUpdateAccess: FieldAccess = ({ req }) => {
 
 /**
  * Structural HR fields update access (name, department, position, hireDate):
- * Admin and HR only. Regular employees and managers cannot alter job structure.
+ * Admin and HR enforced via the Employees beforeValidate hook (strips these
+ * fields for everyone else). Kept permissive here because a restrictive
+ * field-access on REQUIRED fields breaks every non-HR update with
+ * "The following fields are invalid" after Payload strips them.
  */
-export const hrOnlyFieldUpdateAccess: FieldAccess = ({ req }) => {
-  return isHR(req.user as AppUser)
+export const hrOnlyFieldUpdateAccess: FieldAccess = () => {
+  return true
 }

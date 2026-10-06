@@ -6,15 +6,23 @@ import type { PayloadRequest } from 'payload'
 // Shared OWASP helpers (A04/A06/A07/A09)
 // ---------------------------------------------------------------------------
 
-/** Extract best-effort client IP for rate-limit keys (works behind compose). */
+/**
+ * Extract best-effort client IP for rate-limit keys.
+ * H3 hardening: X-Forwarded-For / X-Real-IP are attacker-controlled, so they
+ * are honored ONLY when TRUST_PROXY=1 (deployment sits behind a real reverse
+ * proxy that sanitizes them). Default (direct compose binding on 127.0.0.1)
+ * ignores them — otherwise anyone rotates the header for a fresh rate bucket.
+ */
 export function getClientIp(req: PayloadRequest): string {
-  const headers = req.headers as unknown as Headers
-  const raw =
-    headers?.get?.('x-forwarded-for')?.split(',')[0]?.trim() ||
-    headers?.get?.('x-real-ip')?.trim() ||
-    ''
-  if (raw && net.isIP(raw)) {
-    return raw
+  if (process.env.TRUST_PROXY === '1') {
+    const headers = req.headers as unknown as Headers
+    const raw =
+      headers?.get?.('x-forwarded-for')?.split(',')[0]?.trim() ||
+      headers?.get?.('x-real-ip')?.trim() ||
+      ''
+    if (raw && net.isIP(raw)) {
+      return raw
+    }
   }
   return 'unknown'
 }

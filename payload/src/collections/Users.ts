@@ -93,8 +93,18 @@ export const Users: CollectionConfig = {
         }
       },
     ],
-    afterLogin: [
-      ({ req, user }) => {
+    beforeChange: [
+      ({ data, operation, req }) => {
+        // F4: users provisioned by an Admin/HR are pre-verified (they cannot
+        // receive mail at corporate/test domains). Self-registered users must
+        // still verify via email when SMTP is configured.
+        if (operation === 'create' && data && isHR(req.user as any)) {
+          ;(data as any)._verified = true
+        }
+        return data
+      },
+    ],
+    afterLogin: [      ({ req, user }) => {
         auditLog(req, 'user.login', {
           email: (user as { email?: string })?.email,
           role: (user as { role?: string })?.role,
@@ -126,7 +136,10 @@ export const Users: CollectionConfig = {
     {
       name: 'role',
       type: 'select',
-      required: true,
+      // NOTE: intentionally NOT required: Payload validates required fields on
+      // the update path too, which breaks SYSTEM updates that don't touch role
+      // (e.g. anonymous forgot-password → 400 "Role is required"). Presence is
+      // still guaranteed by defaultValue + create-time enforcement below.
       defaultValue: 'employee',
       saveToJWT: true,
       options: [
@@ -135,9 +148,18 @@ export const Users: CollectionConfig = {
         { label: 'Department Manager', value: 'manager' },
         { label: 'Employee', value: 'employee' },
       ],
+      validate: (val: unknown, { operation }: { operation?: string } = {}) => {
+        if (operation === 'create' && (val == null || val === '')) return 'Role is required.'
+        if (val != null && val !== '' && !['admin', 'hr', 'manager', 'employee'].includes(val as string)) {
+          return 'Invalid role.'
+        }
+        return true
+      },
       access: {
+        // Update stays open (hook strips role for non-admins); create stays
+        // admin-only as defense-in-depth alongside the hook.
         create: roleFieldAccess,
-        update: roleFieldAccess,
+        update: () => true,
       },
       admin: {
         description: 'Assigned RBAC role (Admin-only modification). Defaults to Employee.',
@@ -149,8 +171,9 @@ export const Users: CollectionConfig = {
       relationTo: 'departments',
       saveToJWT: true,
       access: {
+        // Same pattern as role above: hook strips department for non-HR.
         create: userDepartmentFieldAccess,
-        update: userDepartmentFieldAccess,
+        update: () => true,
       },
       admin: {
         description: 'Associated department for scoped access (HR/Admin managed).',

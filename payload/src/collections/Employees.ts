@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { Forbidden } from 'payload'
 
 import { decryptField, encryptField, isEncrypted } from '@/lib/encryption'
 import {
@@ -8,8 +9,10 @@ import {
   employeesDeleteAccess,
   employeesReadAccess,
   employeesUpdateAccess,
+  getUserDepartmentId,
   hrOnlyFieldUpdateAccess,
   isHR,
+  isManager,
   salaryFieldReadAccess,
   salaryFieldUpdateAccess,
 } from '@/lib/rbac'
@@ -46,6 +49,49 @@ export const Employees: CollectionConfig = {
   },
   hooks: {
     beforeOperation: [
+      async ({ args, operation, req }) => {
+        // Per-document ownership for updates (collection access is pass-through
+        // for authenticated users): HR/Admin may update anything; a manager may
+        // update employees of their own department; an employee may update only
+        // their own record (matched by decrypted email). Anything else → 403.
+        if (operation === 'update' && !isHR(req.user as any)) {
+          const user = req.user as any
+          const id = (args as { id?: number | string } | undefined)?.id
+          let allowed = false
+          if (id != null) {
+            // Isolate: the nested lookup must not leak transaction state into
+            // the outer update request.
+            const prevTx = (req as any).transactionID
+            try {
+              const doc = (await req.payload.findByID({
+                id,
+                collection: 'employees',
+                depth: 0,
+                overrideAccess: true,
+              })) as any
+              const rawEmail = doc?.email
+              const docEmail =
+                typeof rawEmail === 'string' && isEncrypted(rawEmail)
+                  ? decryptField(rawEmail)
+                  : rawEmail
+              if (docEmail && user?.email && docEmail.toLowerCase() === String(user.email).toLowerCase()) {
+                allowed = true
+              }
+              if (!allowed && isManager(user)) {
+                const deptId = getUserDepartmentId(user)
+                const docDept = typeof doc?.department === 'object' ? doc?.department?.id : doc?.department
+                if (deptId != null && Number(docDept) === deptId) allowed = true
+              }
+            } catch {
+              // Fall through to deny below.
+            } finally {
+              ;(req as any).transactionID = prevTx
+            }
+          }
+          if (!allowed) throw new Forbidden()
+        }
+        return args
+      },
       async ({ args, operation, req }) => {
         // Transparent query resolution for encrypted 'email' field
         const queryArgs = args as { where?: Record<string, any> } | undefined
@@ -120,12 +166,15 @@ export const Employees: CollectionConfig = {
     {
       name: 'name',
       type: 'text',
-      required: true,
+      // NOTE: intentionally NOT required (see role field in Users.ts): required
+      // fields break non-HR updates with "field is invalid". Presence on create
+      // is enforced by validate below.
       maxLength: 100,
       access: {
         update: hrOnlyFieldUpdateAccess,
       },
-      validate: (val: unknown) => {
+      validate: (val: unknown, { operation }: { operation?: string } = {}) => {
+        if ((val == null || val === '') && operation !== 'create') return true
         if (typeof val !== 'string' || val.trim().length === 0) return 'Name is required.'
         if (val.length > 100) return 'Name must be at most 100 characters.'
         return true
@@ -181,7 +230,11 @@ export const Employees: CollectionConfig = {
       name: 'department',
       type: 'relationship',
       relationTo: 'departments',
-      required: true,
+      // Same NOTE as name above; create-time presence enforced by validate.
+      validate: (val: unknown, { operation }: { operation?: string } = {}) => {
+        if (operation === 'create' && val == null) return 'Department is required.'
+        return true
+      },
       access: {
         update: hrOnlyFieldUpdateAccess,
       },
@@ -190,7 +243,11 @@ export const Employees: CollectionConfig = {
       name: 'position',
       type: 'relationship',
       relationTo: 'positions',
-      required: true,
+      // Same NOTE as name above; create-time presence enforced by validate.
+      validate: (val: unknown, { operation }: { operation?: string } = {}) => {
+        if (operation === 'create' && val == null) return 'Position is required.'
+        return true
+      },
       access: {
         update: hrOnlyFieldUpdateAccess,
       },

@@ -116,6 +116,98 @@ svg {
     }
   }
 
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    .brandMark {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 64px;
+      height: 64px;
+      border-radius: 12px;
+      font-weight: bold;
+      font-size: 15px;
+      color: rgb(0, 0, 0);
+      background: rgb(1000, 1000, 1000);
+    }
+
+    .brandText {
+      display: flex;
+      flex-direction: column;
+      line-height: 26px;
+
+      strong {
+        font-size: 20px;
+      }
+
+      span {
+        font-size: 14px;
+        opacity: 0.7;
+      }
+    }
+  }
+
+  .userLine {
+    margin: 0 0 8px 0;
+    opacity: 0.7;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    width: 100%;
+    margin: 32px 0 8px 0;
+
+    @media (max-width: 1024px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (max-width: 400px) {
+      grid-template-columns: 1fr;
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 18px 8px;
+      border: 1px solid rgb(60, 60, 60);
+      border-radius: 8px;
+      background: rgb(18, 18, 18);
+
+      .cardValue {
+        font-size: 40px;
+        font-weight: bold;
+        line-height: 44px;
+      }
+
+      .cardLabel {
+        font-size: 14px;
+        opacity: 0.7;
+      }
+    }
+  }
+
+  .roles {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 16px 0 28px 0;
+
+    .badge {
+      font-size: 14px;
+      padding: 2px 12px;
+      border: 1px solid rgb(1000, 1000, 1000);
+      border-radius: 999px;
+      opacity: 0.85;
+    }
+  }
+
   .links {
     display: flex;
     align-items: center;

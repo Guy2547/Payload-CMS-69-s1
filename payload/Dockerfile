@@ -39,6 +39,9 @@ RUN adduser --system --uid 1001 nextjs
 # and a no-op when the DB is already current). This keeps
 # `docker compose up -d` working on a wiped database with no host step.
 COPY --from=builder --chown=nextjs:nodejs /app ./
+# M2: pre-create the upload dir owned by the runtime user. Without this the
+# first Media upload fails with EACCES mkdir 'media' (image runs as nextjs).
+RUN mkdir -p /app/media && chown nextjs:nodejs /app/media
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
