@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { makeTextValidate } from '@/lib/field-validation'
 import { isAdmin } from '@/lib/rbac'
 
 // Company domain: departments (e.g. HR, IT, Software Engineering).
@@ -24,11 +25,7 @@ export const Departments: CollectionConfig = {
       required: true,
       unique: true,
       maxLength: 100,
-      validate: (val: unknown) => {
-        if (typeof val !== 'string' || val.trim().length === 0) return 'Name is required.'
-        if (val.length > 100) return 'Name must be at most 100 characters.'
-        return true
-      },
+      validate: makeTextValidate('Name', 100),
     },
     {
       name: 'description',

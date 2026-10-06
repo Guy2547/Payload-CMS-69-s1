@@ -19,7 +19,7 @@ payload/
   Dockerfile          # node:24-alpine, npm install, full-copy runner, CMD: migrate + start
   .dockerignore
   src/payload.config.ts
-  src/collections/    # Admins, Users, Students, Subjects, Teachers, Media
+  src/collections/    # Admins, Users, Departments, Positions, Employees, Media
   src/migrations/     # drizzle migrations (20260928_210429 = ตัวแรก)
   src/payload-types.ts
 env.simple / .env.simple   # template (ของจริงอยู่ .env ซึ่งถูก ignore)
@@ -38,9 +38,9 @@ api.http / api.http.simple # ตัวอย่าง request สำหรับ
 |---|---|---|
 | `Admins` | email (default), firstname, lastname | auth; CRUD เฉพาะ admin; สร้างคนแรกผ่าน `first-register` |
 | `Users` | email (default), username | auth; สมัคร public; อ่านต้อง login; แก้ไขได้เฉพาะตัวเองหรือ admin |
-| `Students` | name*, mobile, cardId | login แล้ว CRUD ได้ (admin หรือ user) |
-| `Subjects` | name* | เหมือน Students |
-| `Teachers` | name* | เหมือน Students |
+| `Employees` | name*, mobile, cardId (PII เข้ารหัส), department*, position* | read=auth (self/manager scope + field mask) / write=admin (+HR) |
+| `Departments` | name* unique | read=auth / write=admin |
+| `Positions` | name* unique, level | read=auth / write=admin (+HR) |
 | `Media` | (default จาก template) | — |
 
 ## 4. Endpoint mapping (Strapi → Payload)

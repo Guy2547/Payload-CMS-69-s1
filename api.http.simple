@@ -389,15 +389,18 @@ Authorization: Bearer {{employeeLogin.response.body.$.token}}
 
 ### 10.2 HR Uploads Image (201 - multipart/form-data; replace path with a real .png/.jpg)
 # In VS Code REST Client: use a multipart body with a file attachment.
+# NOTE: Payload reads non-file fields ONLY from the "_payload" JSON part —
+# a plain "alt" part is ignored and the request 400s (Alt text is required).
 # Expected: 201 as HR; same request as Employee = 403.
 POST {{baseUrl}}/api/media
 Authorization: Bearer {{hrLogin.response.body.$.token}}
 Content-Type: multipart/form-data; boundary=----rbac-test-boundary
 
 ------rbac-test-boundary
-Content-Disposition: form-data; name="alt"
+Content-Disposition: form-data; name="_payload"
+Content-Type: application/json
 
-RBAC test image
+{"alt": "RBAC test image"}
 ------rbac-test-boundary
 Content-Disposition: form-data; name="file"; filename="test.png"
 Content-Type: image/png
@@ -411,9 +414,15 @@ Authorization: Bearer {{employeeLogin.response.body.$.token}}
 Content-Type: multipart/form-data; boundary=----rbac-test-boundary
 
 ------rbac-test-boundary
-Content-Disposition: form-data; name="alt"
+Content-Disposition: form-data; name="_payload"
+Content-Type: application/json
 
-Should be rejected
+{"alt": "Should be rejected"}
+------rbac-test-boundary
+Content-Disposition: form-data; name="file"; filename="test.png"
+Content-Type: image/png
+
+< ./test.png
 ------rbac-test-boundary--
 
 ### ------------------------------------------------------------------------------

@@ -2,17 +2,18 @@ import type { CollectionConfig } from 'payload'
 import { Forbidden } from 'payload'
 
 import { decryptField, encryptField, isEncrypted } from '@/lib/encryption'
+import { makeTextValidate } from '@/lib/field-validation'
 import {
+  canUpdateEmployeeDoc,
   cardIdFieldReadAccess,
   cardIdFieldUpdateAccess,
+  emailFieldReadAccess,
   employeesCreateAccess,
   employeesDeleteAccess,
   employeesReadAccess,
   employeesUpdateAccess,
-  getUserDepartmentId,
   hrOnlyFieldUpdateAccess,
   isHR,
-  isManager,
   salaryFieldReadAccess,
   salaryFieldUpdateAccess,
 } from '@/lib/rbac'
@@ -51,44 +52,12 @@ export const Employees: CollectionConfig = {
     beforeOperation: [
       async ({ args, operation, req }) => {
         // Per-document ownership for updates (collection access is pass-through
-        // for authenticated users): HR/Admin may update anything; a manager may
-        // update employees of their own department; an employee may update only
-        // their own record (matched by decrypted email). Anything else → 403.
+        // for authenticated users). Anything outside self/manager-scope → 403.
         if (operation === 'update' && !isHR(req.user as any)) {
-          const user = req.user as any
           const id = (args as { id?: number | string } | undefined)?.id
-          let allowed = false
-          if (id != null) {
-            // Isolate: the nested lookup must not leak transaction state into
-            // the outer update request.
-            const prevTx = (req as any).transactionID
-            try {
-              const doc = (await req.payload.findByID({
-                id,
-                collection: 'employees',
-                depth: 0,
-                overrideAccess: true,
-              })) as any
-              const rawEmail = doc?.email
-              const docEmail =
-                typeof rawEmail === 'string' && isEncrypted(rawEmail)
-                  ? decryptField(rawEmail)
-                  : rawEmail
-              if (docEmail && user?.email && docEmail.toLowerCase() === String(user.email).toLowerCase()) {
-                allowed = true
-              }
-              if (!allowed && isManager(user)) {
-                const deptId = getUserDepartmentId(user)
-                const docDept = typeof doc?.department === 'object' ? doc?.department?.id : doc?.department
-                if (deptId != null && Number(docDept) === deptId) allowed = true
-              }
-            } catch {
-              // Fall through to deny below.
-            } finally {
-              ;(req as any).transactionID = prevTx
-            }
+          if (id == null || !(await canUpdateEmployeeDoc(req.payload, req.user as any, id, req))) {
+            throw new Forbidden()
           }
-          if (!allowed) throw new Forbidden()
         }
         return args
       },
@@ -114,10 +83,19 @@ export const Employees: CollectionConfig = {
                 })
                 .map((doc: any) => doc.id)
 
-              if (matchedIds.length > 0) {
-                queryArgs.where.id = { in: matchedIds }
+              const idClause = matchedIds.length > 0 ? { in: matchedIds } : { equals: -1 }
+              const prevId = (queryArgs.where as Record<string, any>).id
+              if (prevId !== undefined) {
+                // Preserve a pre-existing id constraint (AND instead of overwrite).
+                const prevAnd = (queryArgs.where as Record<string, any>).and
+                ;(queryArgs.where as Record<string, any>).and = [
+                  ...(Array.isArray(prevAnd) ? prevAnd : []),
+                  { id: prevId },
+                  { id: idClause },
+                ]
+                delete (queryArgs.where as Record<string, any>).id
               } else {
-                queryArgs.where.id = { equals: -1 }
+                ;(queryArgs.where as Record<string, any>).id = idClause
               }
               delete queryArgs.where.email
             } catch {
@@ -173,18 +151,16 @@ export const Employees: CollectionConfig = {
       access: {
         update: hrOnlyFieldUpdateAccess,
       },
-      validate: (val: unknown, { operation }: { operation?: string } = {}) => {
-        if ((val == null || val === '') && operation !== 'create') return true
-        if (typeof val !== 'string' || val.trim().length === 0) return 'Name is required.'
-        if (val.length > 100) return 'Name must be at most 100 characters.'
-        return true
-      },
+      validate: makeTextValidate('Name', 100),
     },
     {
       name: 'email',
       type: 'text',
       admin: {
         description: 'Employee contact email (Encrypted at rest with AES-256-GCM).',
+      },
+      access: {
+        read: emailFieldReadAccess,
       },
       validate: (val: unknown) => {
         if (val == null || val === '') return true
