@@ -66,7 +66,8 @@ jobs:
       DATABASE_URL: postgres://payload:payload@localhost:5432/payload_test
       PAYLOAD_SECRET: ci-dummy-secret-override-at-runtime-1234567890
       # Dummy 32-byte key so encryption/verify code paths are exercised in tests.
-      ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      # Word-based on purpose: random hex trips gitleaks generic-api-key.
+      ENCRYPTION_KEY: this-is-a-ci-dummy-key-123456789
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
