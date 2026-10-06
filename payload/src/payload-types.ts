@@ -179,7 +179,13 @@ export interface Admin {
 export interface User {
   id: number;
   username: string;
+  /**
+   * Assigned RBAC role (Admin-only modification). Defaults to Employee.
+   */
   role: 'admin' | 'hr' | 'manager' | 'employee';
+  /**
+   * Associated department for scoped access (HR/Admin managed).
+   */
   department?: (number | null) | Department;
   updatedAt: string;
   createdAt: string;
@@ -189,6 +195,8 @@ export interface User {
   salt?: string | null;
   hash?: string | null;
   resetPasswordRequestedAt?: string | null;
+  _verified?: boolean | null;
+  _verificationToken?: string | null;
   loginAttempts?: number | null;
   lockUntil?: string | null;
   sessions?:
@@ -231,13 +239,22 @@ export interface Position {
 export interface Employee {
   id: number;
   name: string;
+  /**
+   * Employee contact email (Encrypted at rest with AES-256-GCM).
+   */
   email?: string | null;
   mobile?: string | null;
+  /**
+   * 13-digit National ID (Encrypted at rest with AES-256-GCM, RBAC restricted).
+   */
   cardId?: string | null;
   department: number | Department;
   position: number | Position;
   hireDate?: string | null;
-  salary?: (string | null) | number;
+  /**
+   * Compensation in THB (Encrypted at rest with AES-256-GCM, RBAC restricted).
+   */
+  salary?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -401,6 +418,8 @@ export interface AdminsSelect<T extends boolean = true> {
  */
 export interface UsersSelect<T extends boolean = true> {
   username?: T;
+  role?: T;
+  department?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -409,6 +428,8 @@ export interface UsersSelect<T extends boolean = true> {
   salt?: T;
   hash?: T;
   resetPasswordRequestedAt?: T;
+  _verified?: T;
+  _verificationToken?: T;
   loginAttempts?: T;
   lockUntil?: T;
   sessions?:

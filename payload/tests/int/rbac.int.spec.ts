@@ -116,12 +116,11 @@ describe('Role-Based Access Control (RBAC) Test Suite', () => {
       expect(managerAccess).toEqual({ department: { equals: 1 } })
     })
 
-    it('scopes Manager update access to their department and Employee to own record', () => {
-      const managerUpdate = employeesUpdateAccess({ req: { user: managerUser } } as any)
-      expect(managerUpdate).toEqual({ department: { equals: 1 } })
-
-      const empUpdate = employeesUpdateAccess({ req: { user: employeeUser } } as any)
-      expect(empUpdate).toEqual({ email: { equals: 'somchai.j@cybersec.local' } })
+    it('allows any authenticated user past collection-level update (ownership enforced per-document by hook)', () => {
+      expect(employeesUpdateAccess({ req: { user: managerUser } } as any)).toBe(true)
+      expect(employeesUpdateAccess({ req: { user: employeeUser } } as any)).toBe(true)
+      expect(employeesUpdateAccess({ req: { user: hrUser } } as any)).toBe(true)
+      expect(employeesUpdateAccess({ req: {} } as any)).toBe(false)
     })
   })
 
