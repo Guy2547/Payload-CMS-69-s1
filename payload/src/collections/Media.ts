@@ -1,5 +1,6 @@
 import { ValidationError, type CollectionConfig } from 'payload'
 
+import { makeTextValidate } from '@/lib/field-validation'
 import { isHR, isAdmin, isManager } from '@/lib/rbac'
 
 // 5MB per-file cap (A08 storage-abuse bound). Payload v3 has no
@@ -35,12 +36,7 @@ export const Media: CollectionConfig = {
       type: 'text',
       required: true,
       maxLength: 200,
-      validate: (val: unknown, { operation }: { operation?: string } = {}) => {
-        if ((val == null || val === '') && operation !== 'create') return true
-        if (typeof val !== 'string' || val.trim().length === 0) return 'Alt text is required.'
-        if (val.length > 200) return 'Alt text must be at most 200 characters.'
-        return true
-      },
+      validate: makeTextValidate('Alt text', 200),
     },
   ],
   upload: {

@@ -140,6 +140,51 @@ export const employeesDeleteAccess: Access = ({ req: { user } }) => {
   return isAdmin(user)
 }
 
+/** Minimal structural type so ownership checks stay unit-testable. */
+export interface PayloadFinder {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  findByID: (args: any) => Promise<any>
+}
+
+/**
+ * Per-document update ownership for Employees.
+ * HR/Admin bypass is checked by the caller; here a manager may update
+ * employees of their own department and an employee only their own record
+ * (matched by decrypted email — emails are encrypted at rest, so a static
+ * access Where could never match). Never throws: deny on any failure.
+ */
+export async function canUpdateEmployeeDoc(
+  payload: PayloadFinder,
+  user: AppUser | undefined | null,
+  id: number | string,
+  req?: { transactionID?: unknown },
+): Promise<boolean> {
+  const prevTx = (req as { transactionID?: unknown } | undefined)?.transactionID
+  try {
+    const doc = await payload.findByID({ id, collection: 'employees', depth: 0, overrideAccess: true })
+    const rawEmail = doc?.email
+    const docEmail =
+      typeof rawEmail === 'string' && isEncrypted(rawEmail) ? decryptField(rawEmail) : rawEmail
+    if (
+      docEmail &&
+      user?.email &&
+      String(docEmail).toLowerCase() === String(user.email).toLowerCase()
+    ) {
+      return true
+    }
+    if (isManager(user)) {
+      const deptId = getUserDepartmentId(user)
+      const docDept = typeof doc?.department === 'object' ? doc?.department?.id : doc?.department
+      if (deptId != null && Number(docDept) === deptId) return true
+    }
+    return false
+  } catch {
+    return false
+  } finally {
+    if (req) (req as { transactionID?: unknown }).transactionID = prevTx
+  }
+}
+
 // ============================================================================
 // Field-Level Access Controls (RBAC + ABAC)
 // ============================================================================
