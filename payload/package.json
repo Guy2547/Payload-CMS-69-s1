@@ -23,7 +23,7 @@
     "@payloadcms/next": "3.90.2",
     "@payloadcms/richtext-lexical": "3.90.2",
     "@payloadcms/ui": "3.90.2",
-    "cross-env": "7.0.3",
+    "cross-env": "10.1.0",
     "dotenv": "16.4.7",
     "graphql": "17.0.2",
     "ioredis": "6.0.0",
